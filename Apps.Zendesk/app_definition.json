@@ -1,0 +1,20 @@
+{
+  "definition": [
+    {
+      "name": "url",
+      "description": "Your Zendesk instance url"
+    },
+    {
+      "name": "email",
+      "description": "Your email used in Zendesk"
+    },
+    {
+      "name": "apiToken",
+      "description": "Your API token to access Zendesk"
+    }
+  ],
+  "communicationWrapperType": "HttpWrapper",
+  "authenticationType": null,
+  "authenticationDefition": null,
+  "authenticationResponseMapping": null
+}
