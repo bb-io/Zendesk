@@ -13,7 +13,7 @@ namespace Apps.Zendesk.Actions
     [ActionList]
     public class ArticleActions
     {
-        [Action]
+        [Action("List all articles", Description = "Get a list of all articles on this Zendesk")]
         public ListArticlesResponse ListArticles(string url, string email, AuthenticationCredentialsProvider authenticationCredentialsProvider,
             [ActionParameter] ListArticlesRequest input)
         {            
@@ -27,7 +27,7 @@ namespace Apps.Zendesk.Actions
             };
         }
 
-        [Action]
+        [Action("Get article",  Description = "Get a specific article by ID")]
         public GetArticleResponse GetArticleById(string url, string email, AuthenticationCredentialsProvider authenticationCredentialsProvider,
             [ActionParameter] GetArticleRequest input)
         {
@@ -47,7 +47,26 @@ namespace Apps.Zendesk.Actions
             };
         }
 
-        [Action]
+        [Action("Get article as file", Description = "Get the translatable content of an article as a file")]
+        public FileResponse GetArticleAsFile(string url, string email, AuthenticationCredentialsProvider authenticationCredentialsProvider,
+            [ActionParameter] GetArticleRequest input)
+        {
+            var articlesListEndpoint = $"/api/v2/help_center/{input.Locale}/articles/{input.ArticleId}";
+            var request = CreateRequestToZendesk(email, authenticationCredentialsProvider.Value, articlesListEndpoint, Method.Get);
+            var response = new RestClient(url).Get(request);
+
+            dynamic parsedArticle = JsonConvert.DeserializeObject(response.Content);
+
+            string title = parsedArticle.article.title;
+            string body = parsedArticle.article.body;
+
+            return new FileResponse()
+            {
+                File = Encoding.ASCII.GetBytes($"{title}\n{body}")
+            };
+        }
+
+        [Action("Create article translation", Description = "Create a new translation for an article")]
         public BaseResponse TranslateArticle(string url, string email, AuthenticationCredentialsProvider authenticationCredentialsProvider,
             [ActionParameter] TranslateArticleRequest input)
         {
@@ -71,7 +90,37 @@ namespace Apps.Zendesk.Actions
             };
         }
 
-        [Action]
+        [Action("Translate article from file", Description = "Create a new translation for an article based on a file input")]
+        public BaseResponse TranslateArticleFromFile(string url, string email, AuthenticationCredentialsProvider authenticationCredentialsProvider,
+            [ActionParameter] TranslateArticleFromFileRequest input)
+        {
+            var articlesListEndpoint = $"/api/v2/help_center/articles/{input.ArticleId}/translations";
+            var request = CreateRequestToZendesk(email, authenticationCredentialsProvider.Value, articlesListEndpoint, Method.Post);
+
+            var fileString = Encoding.ASCII.GetString(input.File);
+            var split = fileString.Split('\n');
+            var title = split[0];
+            var body = string.Join("", split.Skip(1));
+
+            request.AddJsonBody(new
+            {
+                translation = new
+                {
+                    locale = input.Locale,
+                    title = title,
+                    body = body
+                }
+            });
+            var response = new RestClient(url).Execute(request);
+
+            return new BaseResponse()
+            {
+                StatusCode = ((int)response.StatusCode),
+                Details = response.Content
+            };
+        }
+
+        [Action("Update article translation", Description = "Update an existing article translation")]
         public BaseResponse UpdateArticleTranslation(string url, string email, AuthenticationCredentialsProvider authenticationCredentialsProvider,
             [ActionParameter] TranslateArticleRequest input)
         {
