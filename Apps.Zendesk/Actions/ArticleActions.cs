@@ -7,6 +7,7 @@ using System.Buffers.Text;
 using System.Text;
 using Apps.Zendesk.Models.Responses;
 using Newtonsoft.Json;
+using HtmlAgilityPack;
 
 namespace Apps.Zendesk.Actions
 {
@@ -47,7 +48,7 @@ namespace Apps.Zendesk.Actions
             };
         }
 
-        [Action("Get article as file", Description = "Get the translatable content of an article as a file")]
+        [Action("Get article as HTML file", Description = "Get the translatable content of an article as a file")]
         public FileResponse GetArticleAsFile(string url, string email, AuthenticationCredentialsProvider authenticationCredentialsProvider,
             [ActionParameter] GetArticleRequest input)
         {
@@ -60,9 +61,11 @@ namespace Apps.Zendesk.Actions
             string title = parsedArticle.article.title;
             string body = parsedArticle.article.body;
 
+            string htmlFile = $"<html><head><title>{title}</title></head><body>{body}</body>";
+
             return new FileResponse()
             {
-                File = Encoding.ASCII.GetBytes($"{title}\n{body}")
+                File = Encoding.ASCII.GetBytes(htmlFile)
             };
         }
 
@@ -90,7 +93,7 @@ namespace Apps.Zendesk.Actions
             };
         }
 
-        [Action("Translate article from file", Description = "Create a new translation for an article based on a file input")]
+        [Action("Translate article from HTML file", Description = "Create a new translation for an article based on a file input")]
         public BaseResponse TranslateArticleFromFile(string url, string email, AuthenticationCredentialsProvider authenticationCredentialsProvider,
             [ActionParameter] TranslateArticleFromFileRequest input)
         {
@@ -98,9 +101,10 @@ namespace Apps.Zendesk.Actions
             var request = CreateRequestToZendesk(email, authenticationCredentialsProvider.Value, articlesListEndpoint, Method.Post);
 
             var fileString = Encoding.ASCII.GetString(input.File);
-            var split = fileString.Split('\n');
-            var title = split[0];
-            var body = string.Join("", split.Skip(1));
+            var doc = new HtmlDocument();
+            doc.LoadHtml(fileString);
+            var title = doc.DocumentNode.SelectSingleNode("html/head/title").InnerText;
+            var body = doc.DocumentNode.SelectSingleNode("/html/body").InnerHtml;
 
             request.AddJsonBody(new
             {
