@@ -5,9 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Apps.OpenAI.Models.Responses
+namespace Apps.Zendesk.Models.Responses
 {
-    public class ListArticlesResponse
+    public class ArticlesResponseWrapper
     {
         public IEnumerable<ArticleDto> Articles { get; set; }
     }

@@ -3,56 +3,47 @@ using Blackbird.Applications.Sdk.Common.Authentication;
 using Apps.OpenAI.Models.Responses;
 using Apps.Zendesk.Models.Requests;
 using RestSharp;
-using System.Buffers.Text;
 using System.Text;
 using Apps.Zendesk.Models.Responses;
 using Newtonsoft.Json;
+using Blackbird.Applications.Sdk.Common.Actions;
+using Apps.Zendesk.Dtos;
 
 namespace Apps.Zendesk.Actions
 {
     [ActionList]
     public class ArticleActions
     {
-        [Action]
-        public ListArticlesResponse ListArticles(string url, string email, AuthenticationCredentialsProvider authenticationCredentialsProvider,
+        [Action("List articles", Description = "List all articles")]
+        public ListArticlesResponse ListArticles(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] ListArticlesRequest input)
-        {            
-            var articlesListEndpoint = $"/api/v2/help_center/{input.Locale}/articles";
-            var request = CreateRequestToZendesk(email, authenticationCredentialsProvider.Value, articlesListEndpoint, Method.Get);
-            var response = new RestClient(url).Get(request);
-           
+        {
+            var client = new ZendeskClient(authenticationCredentialsProviders.First(p => p.KeyName == "api_endpoint").Value);
+            var request = new ZendeskRequest($"/api/v2/help_center/{input.Locale}/articles", 
+                Method.Get, authenticationCredentialsProviders.First(p => p.KeyName == "Authorization"));
             return new ListArticlesResponse()
             {
-                Articles = response.Content
+                Articles = client.Get<ArticlesResponseWrapper>(request).Articles
             };
         }
 
-        [Action]
-        public GetArticleResponse GetArticleById(string url, string email, AuthenticationCredentialsProvider authenticationCredentialsProvider,
+        [Action("Get article", Description = "Get article by Id")]
+        public ArticleDto GetArticleById(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders, string yourUrl,
             [ActionParameter] GetArticleRequest input)
         {
-            var articlesListEndpoint = $"/api/v2/help_center/{input.Locale}/articles/{input.ArticleId}";
-            var request = CreateRequestToZendesk(email, authenticationCredentialsProvider.Value, articlesListEndpoint, Method.Get);
-            var response = new RestClient(url).Get(request);
-
-            dynamic parsedArticle = JsonConvert.DeserializeObject(response.Content);
-
-            string title = parsedArticle.article.title;
-            string body = parsedArticle.article.body;
-
-            return new GetArticleResponse()
-            {
-                Title = title,
-                Body = body
-            };
+            var client = new ZendeskClient(authenticationCredentialsProviders.First(p => p.KeyName == "api_endpoint").Value);
+            var request = new ZendeskRequest($"/api/v2/help_center/{input.Locale}/articles/{input.ArticleId}",
+                Method.Get, authenticationCredentialsProviders.First(p => p.KeyName == "Authorization"));
+            return client.Get<ArticleResponseWrapper<ArticleDto>>(request).Article;
         }
 
-        [Action]
-        public BaseResponse TranslateArticle(string url, string email, AuthenticationCredentialsProvider authenticationCredentialsProvider,
+        [Action("Translate article", Description = "Translate article by Id")]
+        public void TranslateArticle(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] TranslateArticleRequest input)
         {
-            var articlesListEndpoint = $"/api/v2/help_center/articles/{input.ArticleId}/translations";
-            var request = CreateRequestToZendesk(email, authenticationCredentialsProvider.Value, articlesListEndpoint, Method.Post);
+            var client = new ZendeskClient(authenticationCredentialsProviders.First(p => p.KeyName == "api_endpoint").Value);
+            var request = new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations",
+                Method.Post, authenticationCredentialsProviders.First(p => p.KeyName == "Authorization"));
             request.AddJsonBody(new
             {
                 translation = new
@@ -62,21 +53,16 @@ namespace Apps.Zendesk.Actions
                     body = input.TranslatedBody
                 }
             });
-            var response = new RestClient(url).Execute(request);
-            
-            return new BaseResponse()
-            {
-                StatusCode = ((int)response.StatusCode),
-                Details = response.Content
-            };
+            client.Execute(request);
         }
 
-        [Action]
-        public BaseResponse UpdateArticleTranslation(string url, string email, AuthenticationCredentialsProvider authenticationCredentialsProvider,
+        [Action("Update translation", Description = "Update translation for the article")]
+        public void UpdateArticleTranslation(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] TranslateArticleRequest input)
         {
-            var articlesListEndpoint = $"/api/v2/help_center/articles/{input.ArticleId}/translations/{input.Locale}";
-            var request = CreateRequestToZendesk(email, authenticationCredentialsProvider.Value, articlesListEndpoint, Method.Put);
+            var client = new ZendeskClient(authenticationCredentialsProviders.First(p => p.KeyName == "api_endpoint").Value);
+            var request = new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations/{input.Locale}",
+                Method.Put, authenticationCredentialsProviders.First(p => p.KeyName == "Authorization"));
             request.AddJsonBody(new
             {
                 translation = new
@@ -85,22 +71,7 @@ namespace Apps.Zendesk.Actions
                     body = input.TranslatedBody
                 }
             });
-            var response = new RestClient(url).Execute(request);
-
-            return new BaseResponse()
-            {
-                StatusCode = ((int)response.StatusCode),
-                Details = response.Content
-            };
-        }
-
-        private RestRequest CreateRequestToZendesk(string email, string token, string endpoint,
-            RestSharp.Method methodType)
-        {
-            string base64Key = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{email}/token:{token}"));
-            var request = new RestRequest(endpoint, methodType);
-            request.AddHeader("Authorization", $"Basic {base64Key}");
-            return request;
+            client.Execute(request);
         }
     }
 }
