@@ -39,12 +39,13 @@ namespace Apps.Zendesk.Actions
         }
 
         [Action("Get article as HTML file", Description = "Get the translatable content of an article as a file")]
-        public FileResponse GetArticleAsFile(string url, string email, AuthenticationCredentialsProvider authenticationCredentialsProvider,
+        public FileResponse GetArticleAsFile(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] GetArticleRequest input)
         {
-            var articlesListEndpoint = $"/api/v2/help_center/{input.Locale}/articles/{input.ArticleId}";
-            var request = CreateRequestToZendesk(email, authenticationCredentialsProvider.Value, articlesListEndpoint, Method.Get);
-            var response = new RestClient(url).Get(request);
+            var client = new ZendeskClient(authenticationCredentialsProviders.First(p => p.KeyName == "api_endpoint").Value);
+            var request = new ZendeskRequest($"/api/v2/help_center/{input.Locale}/articles/{input.ArticleId}",
+                Method.Get, authenticationCredentialsProviders.First(p => p.KeyName == "Authorization"));
+            var response = client.Get(request);
 
             dynamic parsedArticle = JsonConvert.DeserializeObject(response.Content);
 
@@ -60,7 +61,7 @@ namespace Apps.Zendesk.Actions
         }
 
         [Action("Create article translation", Description = "Create a new translation for an article")]
-        public BaseResponse TranslateArticle(string url, string email, AuthenticationCredentialsProvider authenticationCredentialsProvider,
+        public void TranslateArticle(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] TranslateArticleRequest input)
         {
             var client = new ZendeskClient(authenticationCredentialsProviders.First(p => p.KeyName == "api_endpoint").Value);
@@ -79,11 +80,13 @@ namespace Apps.Zendesk.Actions
         }
 
         [Action("Translate article from HTML file", Description = "Create a new translation for an article based on a file input")]
-        public BaseResponse TranslateArticleFromFile(string url, string email, AuthenticationCredentialsProvider authenticationCredentialsProvider,
+        public BaseResponse TranslateArticleFromFile(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] TranslateArticleFromFileRequest input)
         {
-            var articlesListEndpoint = $"/api/v2/help_center/articles/{input.ArticleId}/translations";
-            var request = CreateRequestToZendesk(email, authenticationCredentialsProvider.Value, articlesListEndpoint, Method.Post);
+            var client = new ZendeskClient(authenticationCredentialsProviders.First(p => p.KeyName == "api_endpoint").Value);
+            var request = new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations",
+                Method.Post, authenticationCredentialsProviders.First(p => p.KeyName == "Authorization"));
+
 
             var fileString = Encoding.ASCII.GetString(input.File);
             var doc = new HtmlDocument();
@@ -100,7 +103,7 @@ namespace Apps.Zendesk.Actions
                     body = body
                 }
             });
-            var response = new RestClient(url).Execute(request);
+            var response = client.Execute(request);
 
             return new BaseResponse()
             {
@@ -110,7 +113,7 @@ namespace Apps.Zendesk.Actions
         }
 
         [Action("Update article translation", Description = "Update an existing article translation")]
-        public BaseResponse UpdateArticleTranslation(string url, string email, AuthenticationCredentialsProvider authenticationCredentialsProvider,
+        public void UpdateArticleTranslation(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] TranslateArticleRequest input)
         {
             var client = new ZendeskClient(authenticationCredentialsProviders.First(p => p.KeyName == "api_endpoint").Value);
