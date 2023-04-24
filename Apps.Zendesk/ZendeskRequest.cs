@@ -10,9 +10,9 @@ namespace Apps.Zendesk
 {
     public class ZendeskRequest : RestRequest
     {
-        public ZendeskRequest(string endpoint, Method method, AuthenticationCredentialsProvider provider) : base(endpoint, method)
+        public ZendeskRequest(string endpoint, Method method, IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders) : base(endpoint, method)
         {
-            this.AddHeader("Authorization", provider.Value);
+            this.AddHeader("Authorization", authenticationCredentialsProviders.First(p => p.KeyName == "Authorization").Value);
             this.AddHeader("accept", "*/*");
         }
     }

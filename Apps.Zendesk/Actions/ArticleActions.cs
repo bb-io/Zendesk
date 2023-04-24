@@ -19,9 +19,9 @@ namespace Apps.Zendesk.Actions
         public ListArticlesResponse ListArticles(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] ListArticlesRequest input)
         {
-            var client = new ZendeskClient(authenticationCredentialsProviders.First(p => p.KeyName == "api_endpoint").Value);
+            var client = new ZendeskClient(authenticationCredentialsProviders);
             var request = new ZendeskRequest($"/api/v2/help_center/{input.Locale}/articles", 
-                Method.Get, authenticationCredentialsProviders.First(p => p.KeyName == "Authorization"));
+                Method.Get, authenticationCredentialsProviders);
             return new ListArticlesResponse()
             {
                 Articles = client.Get<ArticlesResponseWrapper>(request).Articles
@@ -29,12 +29,12 @@ namespace Apps.Zendesk.Actions
         }
 
         [Action("Get article", Description = "Get article by Id")]
-        public ArticleDto GetArticleById(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders, string yourUrl,
+        public ArticleDto GetArticleById(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] GetArticleRequest input)
         {
-            var client = new ZendeskClient(authenticationCredentialsProviders.First(p => p.KeyName == "api_endpoint").Value);
+            var client = new ZendeskClient(authenticationCredentialsProviders);
             var request = new ZendeskRequest($"/api/v2/help_center/{input.Locale}/articles/{input.ArticleId}",
-                Method.Get, authenticationCredentialsProviders.First(p => p.KeyName == "Authorization"));
+                Method.Get, authenticationCredentialsProviders);
             return client.Get<ArticleResponseWrapper<ArticleDto>>(request).Article;
         }
 
@@ -42,9 +42,9 @@ namespace Apps.Zendesk.Actions
         public FileResponse GetArticleAsFile(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] GetArticleRequest input)
         {
-            var client = new ZendeskClient(authenticationCredentialsProviders.First(p => p.KeyName == "api_endpoint").Value);
+            var client = new ZendeskClient(authenticationCredentialsProviders);
             var request = new ZendeskRequest($"/api/v2/help_center/{input.Locale}/articles/{input.ArticleId}",
-                Method.Get, authenticationCredentialsProviders.First(p => p.KeyName == "Authorization"));
+                Method.Get, authenticationCredentialsProviders);
             var response = client.Get(request);
 
             dynamic parsedArticle = JsonConvert.DeserializeObject(response.Content);
@@ -64,9 +64,9 @@ namespace Apps.Zendesk.Actions
         public void TranslateArticle(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] TranslateArticleRequest input)
         {
-            var client = new ZendeskClient(authenticationCredentialsProviders.First(p => p.KeyName == "api_endpoint").Value);
+            var client = new ZendeskClient(authenticationCredentialsProviders);
             var request = new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations",
-                Method.Post, authenticationCredentialsProviders.First(p => p.KeyName == "Authorization"));
+                Method.Post, authenticationCredentialsProviders);
             request.AddJsonBody(new
             {
                 translation = new
@@ -83,9 +83,9 @@ namespace Apps.Zendesk.Actions
         public BaseResponse TranslateArticleFromFile(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] TranslateArticleFromFileRequest input)
         {
-            var client = new ZendeskClient(authenticationCredentialsProviders.First(p => p.KeyName == "api_endpoint").Value);
+            var client = new ZendeskClient(authenticationCredentialsProviders);
             var request = new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations",
-                Method.Post, authenticationCredentialsProviders.First(p => p.KeyName == "Authorization"));
+                Method.Post, authenticationCredentialsProviders);
 
 
             var fileString = Encoding.ASCII.GetString(input.File);
@@ -116,9 +116,9 @@ namespace Apps.Zendesk.Actions
         public void UpdateArticleTranslation(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] TranslateArticleRequest input)
         {
-            var client = new ZendeskClient(authenticationCredentialsProviders.First(p => p.KeyName == "api_endpoint").Value);
+            var client = new ZendeskClient(authenticationCredentialsProviders);
             var request = new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations/{input.Locale}",
-                Method.Put, authenticationCredentialsProviders.First(p => p.KeyName == "Authorization"));
+                Method.Put, authenticationCredentialsProviders);
             request.AddJsonBody(new
             {
                 translation = new

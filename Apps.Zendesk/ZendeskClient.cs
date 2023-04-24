@@ -10,6 +10,13 @@ namespace Apps.Zendesk
 {
     public class ZendeskClient : RestClient
     {
-        public ZendeskClient(string url) : base(new RestClientOptions() { ThrowOnAnyError = true, BaseUrl = new Uri(url) }) { }
+        public ZendeskClient(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders) : 
+            base(new RestClientOptions() { ThrowOnAnyError = true, BaseUrl = GetUri(authenticationCredentialsProviders) }) { }
+
+        private static Uri GetUri(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders)
+        {
+            var url = authenticationCredentialsProviders.First(p => p.KeyName == "api_endpoint").Value;
+            return new Uri(url);
+        }
     }
 }
