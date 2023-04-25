@@ -1,4 +1,5 @@
 ﻿using Apps.Zendesk.Models.Responses;
+using Apps.Zendesk.Webhooks.Payload;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Webhooks;
 using RestSharp;
@@ -24,7 +25,6 @@ namespace Apps.Zendesk.Webhooks.Handlers
 
         public async Task SubscribeAsync(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProvider, Dictionary<string, string> values)
         {
-            var authHeader = authenticationCredentialsProvider.First(p => p.KeyName == "Authorization").Value;
             var client = new ZendeskClient(authenticationCredentialsProvider);
             var request = new ZendeskRequest($"/api/v2/webhooks", Method.Post, authenticationCredentialsProvider);
             request.AddJsonBody(new
@@ -48,10 +48,13 @@ namespace Apps.Zendesk.Webhooks.Handlers
 
         public async Task UnsubscribeAsync(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProvider, Dictionary<string, string> values)
         {
-            var authHeader = authenticationCredentialsProvider.First(p => p.KeyName == "Authorization").Value;
             var client = new ZendeskClient(authenticationCredentialsProvider);
-            var getRequest = new ZendeskRequest($"/api2/v2/webhooks?name={SubscriptionEvent}", Method.Get, authenticationCredentialsProvider);
+            var getRequest = new ZendeskRequest($"/api/v2/webhooks?filter[name_contains]={SubscriptionEvent}", Method.Get, authenticationCredentialsProvider);
+            var webhooks = await client.GetAsync<WebhooksListResponse>(getRequest);
+            var webhookId = webhooks.Webhooks.First().Id;
 
+            var deleteRequest = new ZendeskRequest($"/api/v2/webhooks/{webhookId}", Method.Delete, authenticationCredentialsProvider);
+            await client.ExecuteAsync(deleteRequest);
         }
     }
 }
