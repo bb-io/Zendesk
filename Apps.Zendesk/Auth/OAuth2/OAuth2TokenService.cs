@@ -5,8 +5,7 @@ namespace Apps.Zendesk.Authorization.OAuth2
 {
     public class OAuth2TokenService : IOAuth2TokenService
     {
-        private const string ExpiresAtKeyName = "expires_at";
-        private const string TokenUrl = "";
+        private static string TokenUrl = "";
 
         public bool IsRefreshToken(Dictionary<string, string> values)
         {
@@ -24,13 +23,16 @@ namespace Apps.Zendesk.Authorization.OAuth2
             Dictionary<string, string> values, 
             CancellationToken cancellationToken)
         {
+            TokenUrl = $"{values["api_endpoint"].TrimEnd('/')}/oauth/tokens";
             const string grant_type = "authorization_code";
 
             var bodyParameters = new Dictionary<string, string>
             {
                 { "grant_type", grant_type },
                 { "client_id", values["client_id"] },
+                { "client_secret", values["client_secret"] },
                 { "redirect_uri", values["redirect_uri"] },
+                { "scope", "read write" },
                 { "code", code }
             };
             return await RequestToken(bodyParameters, cancellationToken);
@@ -50,9 +52,6 @@ namespace Apps.Zendesk.Authorization.OAuth2
             var responseContent = await response.Content.ReadAsStringAsync();
             var resultDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(responseContent)?.ToDictionary(r => r.Key, r => r.Value?.ToString())
                 ?? throw new InvalidOperationException($"Invalid response content: {responseContent}");
-            //var expriresIn = int.Parse(resultDictionary["expires_in"]);
-            //var expiresAt = utcNow.AddSeconds(expriresIn);
-            //resultDictionary.Add(ExpiresAtKeyName, expiresAt.ToString());
             return resultDictionary;
         }
     }

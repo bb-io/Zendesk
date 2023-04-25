@@ -7,11 +7,14 @@ namespace Apps.Zendesk.Authorization.OAuth2
     {
         public string GetAuthorizationUrl(Dictionary<string, string> values)
         {
-            const string oauthUrl = "";
+            string oauthUrl = $"{values["api_endpoint"].TrimEnd('/')}/oauth/authorizations/new";
             var parameters = new Dictionary<string, string>
             {
                 { "client_id", values["client_id"] },
-                { "redirect_uri", values["redirect_uri"] }
+                { "redirect_uri", values["redirect_uri"] },
+                { "response_type", "code"},
+                { "state", values["state"] },
+                { "scope", "read write" }
             };
             return QueryHelpers.AddQueryString(oauthUrl, parameters);
         }
