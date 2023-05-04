@@ -17,25 +17,12 @@ namespace Apps.Zendesk.Connections
                 ConnectionUsage = ConnectionUsage.Actions,
                 ConnectionProperties = new List<ConnectionProperty>()
                 {
-                    new ConnectionProperty("client_id"),
-                    new ConnectionProperty("client_secret"),
-                    new ConnectionProperty("redirect_uri"),
+                    //new ConnectionProperty("client_id"),
+                    //new ConnectionProperty("client_secret"),
+                    //new ConnectionProperty("redirect_uri"),
                     new ConnectionProperty("api_endpoint"),
                 }
-            }, 
-            // Api token
-            //new ConnectionPropertyGroup
-            //{
-            //    Name = "API Token",
-            //    AuthenticationType = ConnectionAuthenticationType.Undefined,
-            //    ConnectionUsage = ConnectionUsage.Actions,
-            //    ConnectionProperties = new List<ConnectionProperty>()
-            //    {
-            //        new ConnectionProperty("api_endpoint"),
-            //        new ConnectionProperty("email"),
-            //        new ConnectionProperty(ApiKeyName)
-            //    }
-            //}
+            },
         };
 
         public IEnumerable<AuthenticationCredentialsProvider> CreateAuthorizationCredentialsProviders(Dictionary<string, string> values)
@@ -52,21 +39,6 @@ namespace Apps.Zendesk.Connections
                 "api_endpoint",
                 url.Value
             );
-            // Api token
-            //var email = values.First(v => v.Key == "email").Value;
-            //var token = values.First(v => v.Key == ApiKeyName).Value;
-            //string base64Key = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{email}/token:{token}"));
-            //yield return new AuthenticationCredentialsProvider(
-            //    AuthenticationCredentialsRequestLocation.Header,
-            //    "Authorization",
-            //    $"Basic {base64Key}"
-            //);
-            //var url = values.First(v => v.Key == "api_endpoint");
-            //yield return new AuthenticationCredentialsProvider(
-            //    AuthenticationCredentialsRequestLocation.None,
-            //    url.Key,
-            //    url.Value
-            //);
         }
     }
 }
