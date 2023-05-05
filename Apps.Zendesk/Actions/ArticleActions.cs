@@ -9,14 +9,27 @@ using Newtonsoft.Json;
 using HtmlAgilityPack;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Apps.Zendesk.Dtos;
+using System.Linq;
 
 namespace Apps.Zendesk.Actions
 {
     [ActionList]
     public class ArticleActions
     {
-        [Action("List articles", Description = "List all articles")]
-        public ListArticlesResponse ListArticles(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+        [Action("List all articles", Description = "List all articles")]
+        public ListArticlesResponse ListArticles(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders)
+        {
+            var client = new ZendeskClient(authenticationCredentialsProviders);
+            var request = new ZendeskRequest($"/api/v2/help_center/articles",
+                Method.Get, authenticationCredentialsProviders);
+            return new ListArticlesResponse()
+            {
+                Articles = client.Get<ArticlesResponseWrapper>(request).Articles
+            };
+        }
+
+        [Action("List articles by language", Description = "List all articles by language")]
+        public ListArticlesResponse ListArticlesByLanguage(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] ListArticlesRequest input)
         {
             var client = new ZendeskClient(authenticationCredentialsProviders);
@@ -25,6 +38,18 @@ namespace Apps.Zendesk.Actions
             return new ListArticlesResponse()
             {
                 Articles = client.Get<ArticlesResponseWrapper>(request).Articles
+            };
+        }
+
+        [Action("Get articles not translated in language", Description = "Get articles not translated in specific language")]
+        public ListArticlesResponse GetArticlesNotTranslated(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+            [ActionParameter] string locale)
+        {
+            var allArticles = ListArticles(authenticationCredentialsProviders).Articles;
+            var allTranslatedArticles = ListArticlesByLanguage(authenticationCredentialsProviders, new ListArticlesRequest() { Locale = locale }).Articles;
+            return new ListArticlesResponse()
+            {
+                Articles = allArticles.Where(a1 => !allTranslatedArticles.Any(a2 => a2.Id == a1.Id)).ToList()
             };
         }
 
@@ -60,7 +85,7 @@ namespace Apps.Zendesk.Actions
             };
         }
 
-        [Action("Create article translation", Description = "Create a new translation for an article")]
+        [Action("Create article translation(new)", Description = "Create a new translation for an article")]
         public void TranslateArticle(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] TranslateArticleRequest input)
         {
@@ -128,6 +153,21 @@ namespace Apps.Zendesk.Actions
                 }
             });
             client.Execute(request);
+        }
+
+        [Action("Create or update article translation", Description = "Create or update article translation")]
+        public void CreateOrUpdateTranslation(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+            [ActionParameter] TranslateArticleRequest input)
+        {
+            var notTranslated = GetArticlesNotTranslated(authenticationCredentialsProviders, input.Locale);
+            if(notTranslated.Articles.Any(a => a.Id == long.Parse(input.ArticleId)))
+            {
+                TranslateArticle(authenticationCredentialsProviders, input);
+            }
+            else
+            {
+                UpdateArticleTranslation(authenticationCredentialsProviders, input);
+            }
         }
     }
 }
