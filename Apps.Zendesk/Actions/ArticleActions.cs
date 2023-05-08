@@ -77,7 +77,7 @@ namespace Apps.Zendesk.Actions
             string title = parsedArticle.article.title;
             string body = parsedArticle.article.body;
 
-            string htmlFile = $"<html><head><title>{title}</title></head><body>{body}</body>";
+            string htmlFile = $"<html><head><title>{title}</title></head><body>{body}</body></html>";
 
             return new FileResponse()
             {
