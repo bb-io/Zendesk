@@ -101,7 +101,18 @@ namespace Apps.Zendesk.Actions
                     body = input.TranslatedBody
                 }
             });
-            client.Execute(request);
+
+            try
+            {
+                client.Execute(request);
+            }
+            catch (HttpRequestException ex)
+            {
+                if(ex.StatusCode == System.Net.HttpStatusCode.UnprocessableEntity)
+                {
+                    throw new Exception("Specified language is not supported in your Zendesk. Please add it in language settings");
+                }
+            }
         }
 
         [Action("Translate article from HTML file", Description = "Create a new translation for an article based on a file input")]
