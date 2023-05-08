@@ -24,7 +24,7 @@ namespace Apps.Zendesk.Actions
                 Method.Get, authenticationCredentialsProviders);
             return new ListArticlesResponse()
             {
-                Articles = client.Get<ArticlesResponseWrapper>(request).Articles
+                Articles = client.Get<ArticlesResponseWrapper>(request)?.Articles ?? new List<ArticleDto>()
             };
         }
 
@@ -37,7 +37,7 @@ namespace Apps.Zendesk.Actions
                 Method.Get, authenticationCredentialsProviders);
             return new ListArticlesResponse()
             {
-                Articles = client.Get<ArticlesResponseWrapper>(request).Articles
+                Articles = client.Get<ArticlesResponseWrapper>(request)?.Articles ?? new List<ArticleDto>()
             };
         }
 
@@ -54,13 +54,13 @@ namespace Apps.Zendesk.Actions
         }
 
         [Action("Get article", Description = "Get article by Id")]
-        public ArticleDto GetArticleById(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+        public ArticleDto? GetArticleById(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] GetArticleRequest input)
         {
             var client = new ZendeskClient(authenticationCredentialsProviders);
             var request = new ZendeskRequest($"/api/v2/help_center/{input.Locale}/articles/{input.ArticleId}",
                 Method.Get, authenticationCredentialsProviders);
-            return client.Get<ArticleResponseWrapper<ArticleDto>>(request).Article;
+            return client.Get<ArticleResponseWrapper<ArticleDto>>(request)?.Article;
         }
 
         [Action("Get article as HTML file", Description = "Get the translatable content of an article as a file")]
@@ -85,7 +85,7 @@ namespace Apps.Zendesk.Actions
             };
         }
 
-        [Action("Create article translation(new)", Description = "Create a new translation for an article")]
+        [Action("Create article translation (new)", Description = "Create a new translation for an article")]
         public void TranslateArticle(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] TranslateArticleRequest input)
         {
