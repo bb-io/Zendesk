@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.0.4" />
+    <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.0.7" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.46" />
     <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="2.2.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
@@ -23,5 +23,9 @@
   <ItemGroup>
     <Folder Include="Webhooks\Handlers\UserHandlers\" />
   </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="dotnet publish --no-build -c Release&#xD;&#xA;winrar a -afzip ./bin/Release/net6.0/publish.zip ./bin/Release/net6.0/publish" />
+  </Target>
 
 </Project>
