@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Apps.Zendesk.Webhooks.Payload
+namespace Apps.Zendesk.Webhooks.Payload.Articles
 {
-    public class PayloadTemplate<T>
+    public class ArticlePayloadTemplate<T>
     {
         public int AccountId { get; set; }
         public Detail Detail { get; set; }
@@ -17,15 +17,10 @@ namespace Apps.Zendesk.Webhooks.Payload
         public string Type { get; set; }
         public string ZendeskEventVersion { get; set; }
     }
+
     public class Detail
     {
-        public string CreatedAt { get; set; }
-        public string DefaultGroupId { get; set; }
-        public string Email { get; set; }
-        public string ExternalId { get; set; }
+        public string BrandId { get; set; }
         public string Id { get; set; }
-        public string OrganizationId { get; set; }
-        public string Role { get; set; }
-        public string UpdatedAt { get; set; }
     }
 }
