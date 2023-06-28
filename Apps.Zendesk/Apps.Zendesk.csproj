@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -24,8 +24,8 @@
     <Folder Include="Webhooks\Handlers\UserHandlers\" />
   </ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="dotnet publish --no-build -c Release&#xD;&#xA;winrar a -afzip ./bin/Release/net6.0/publish.zip ./bin/Release/net6.0/publish" />
-  </Target>
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+		<Exec Command="dotnet publish --no-build -c Release&#xD;&#xA;winrar a -afzip ./bin/Release/net7.0/publish.zip ./bin/Release/net7.0/publish" />
+	</Target>
 
 </Project>
