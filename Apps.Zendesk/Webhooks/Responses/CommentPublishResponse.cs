@@ -5,15 +5,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Apps.Zendesk.Models.Requests
+namespace Apps.Zendesk.Webhooks.Responses
 {
-    public class TranslateArticleFromFileRequest
+    public class CommentPublishResponse : ArticleResponse
     {
+        [Display("Comment ID")]
+        public string Id { get; set; }
         public string Locale { get; set; }
-
-        [Display("Article ID")]
-        public string ArticleId { get; set; }
-
-        public byte[] File { get; set; }
     }
 }

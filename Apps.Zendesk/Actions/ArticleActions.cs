@@ -16,7 +16,7 @@ namespace Apps.Zendesk.Actions
     [ActionList]
     public class ArticleActions
     {
-        [Action("List all articles", Description = "List all articles")]
+        [Action("Get all articles", Description = "List all articles")]
         public ListArticlesResponse ListArticles(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders)
         {
             var client = new ZendeskClient(authenticationCredentialsProviders);
@@ -28,7 +28,7 @@ namespace Apps.Zendesk.Actions
             };
         }
 
-        [Action("List articles by language", Description = "List all articles by language")]
+        [Action("Get articles by language", Description = "List all articles by language")]
         public ListArticlesResponse ListArticlesByLanguage(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] ListArticlesRequest input)
         {
@@ -43,7 +43,7 @@ namespace Apps.Zendesk.Actions
 
         [Action("Get articles not translated in language", Description = "Get articles not translated in specific language")]
         public ListArticlesResponse GetArticlesNotTranslated(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-            [ActionParameter] string locale)
+            [ActionParameter][Display("Locale")] string locale)
         {
             var allArticles = ListArticles(authenticationCredentialsProviders).Articles;
             var allTranslatedArticles = ListArticlesByLanguage(authenticationCredentialsProviders, new ListArticlesRequest() { Locale = locale }).Articles;
@@ -85,36 +85,6 @@ namespace Apps.Zendesk.Actions
             };
         }
 
-        [Action("Create article translation (new)", Description = "Create a new translation for an article")]
-        public void TranslateArticle(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-            [ActionParameter] TranslateArticleRequest input)
-        {
-            var client = new ZendeskClient(authenticationCredentialsProviders);
-            var request = new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations",
-                Method.Post, authenticationCredentialsProviders);
-            request.AddJsonBody(new
-            {
-                translation = new
-                {
-                    locale = input.Locale,
-                    title = input.TranslatedTitle,
-                    body = input.TranslatedBody
-                }
-            });
-
-            try
-            {
-                client.Execute(request);
-            }
-            catch (HttpRequestException ex)
-            {
-                if(ex.StatusCode == System.Net.HttpStatusCode.UnprocessableEntity)
-                {
-                    throw new Exception("Specified language is not supported in your Zendesk. Please add it in language settings");
-                }
-            }
-        }
-
         [Action("Translate article from HTML file", Description = "Create a new translation for an article based on a file input")]
         public BaseResponse TranslateArticleFromFile(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] TranslateArticleFromFileRequest input)
@@ -122,7 +92,6 @@ namespace Apps.Zendesk.Actions
             var client = new ZendeskClient(authenticationCredentialsProviders);
             var request = new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations",
                 Method.Post, authenticationCredentialsProviders);
-
 
             var fileString = Encoding.ASCII.GetString(input.File);
             var doc = new HtmlDocument();
@@ -148,24 +117,6 @@ namespace Apps.Zendesk.Actions
             };
         }
 
-        [Action("Update article translation", Description = "Update an existing article translation")]
-        public void UpdateArticleTranslation(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-            [ActionParameter] TranslateArticleRequest input)
-        {
-            var client = new ZendeskClient(authenticationCredentialsProviders);
-            var request = new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations/{input.Locale}",
-                Method.Put, authenticationCredentialsProviders);
-            request.AddJsonBody(new
-            {
-                translation = new
-                {
-                    title = input.TranslatedTitle,
-                    body = input.TranslatedBody
-                }
-            });
-            client.Execute(request);
-        }
-
         [Action("Create or update article translation", Description = "Create or update article translation")]
         public void CreateOrUpdateTranslation(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] TranslateArticleRequest input)
@@ -179,6 +130,54 @@ namespace Apps.Zendesk.Actions
             {
                 UpdateArticleTranslation(authenticationCredentialsProviders, input);
             }
+        }
+
+        //[Action("Create article translation (new)", Description = "Create a new translation for an article")]
+        private void TranslateArticle(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+            [ActionParameter] TranslateArticleRequest input)
+        {
+            var client = new ZendeskClient(authenticationCredentialsProviders);
+            var request = new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations",
+                Method.Post, authenticationCredentialsProviders);
+            request.AddJsonBody(new
+            {
+                translation = new
+                {
+                    locale = input.Locale,
+                    title = input.Title,
+                    body = input.Body
+                }
+            });
+
+            try
+            {
+                client.Execute(request);
+            }
+            catch (HttpRequestException ex)
+            {
+                if (ex.StatusCode == System.Net.HttpStatusCode.UnprocessableEntity)
+                {
+                    throw new Exception("Specified language is not supported in your Zendesk. Please add it in language settings");
+                }
+            }
+        }
+
+        //[Action("Update article translation", Description = "Update an existing article translation")]
+        private void UpdateArticleTranslation(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+            [ActionParameter] TranslateArticleRequest input)
+        {
+            var client = new ZendeskClient(authenticationCredentialsProviders);
+            var request = new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations/{input.Locale}",
+                Method.Put, authenticationCredentialsProviders);
+            request.AddJsonBody(new
+            {
+                translation = new
+                {
+                    title = input.Title,
+                    body = input.Body
+                }
+            });
+            client.Execute(request);
         }
     }
 }

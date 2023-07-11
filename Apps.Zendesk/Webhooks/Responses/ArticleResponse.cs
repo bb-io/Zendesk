@@ -5,18 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Apps.Zendesk.Models.Requests
+namespace Apps.Zendesk.Webhooks.Responses
 {
-    public class TranslateArticleRequest
+    public class ArticleResponse
     {
-        public string Locale { get; set; }
-
         [Display("Article ID")]
         public string ArticleId { get; set; }
-
-        public string Title { get; set; }
-
-        [Display("Content (HTML)")]
-        public string Body { get; set; }
     }
 }
