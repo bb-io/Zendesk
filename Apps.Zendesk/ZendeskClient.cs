@@ -11,7 +11,7 @@ namespace Apps.Zendesk
     public class ZendeskClient : RestClient
     {
         public ZendeskClient(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders) : 
-            base(new RestClientOptions() { ThrowOnAnyError = true, BaseUrl = GetUri(authenticationCredentialsProviders) }) { }
+            base(new RestClientOptions() { ThrowOnAnyError = false, BaseUrl = GetUri(authenticationCredentialsProviders) }) { }
 
         private static Uri GetUri(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders)
         {

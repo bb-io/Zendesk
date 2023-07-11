@@ -72,6 +72,9 @@ namespace Apps.Zendesk.Actions
                 Method.Get, authenticationCredentialsProviders);
             var response = client.Get(request);
 
+            if (!response.IsSuccessful)
+                throw new Exception(response.Content);
+
             dynamic parsedArticle = JsonConvert.DeserializeObject(response.Content);
 
             string title = parsedArticle.article.title;
@@ -86,12 +89,15 @@ namespace Apps.Zendesk.Actions
         }
 
         [Action("Translate article from HTML file", Description = "Create a new translation for an article based on a file input")]
-        public BaseResponse TranslateArticleFromFile(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+        public void TranslateArticleFromFile(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] TranslateArticleFromFileRequest input)
         {
+            var notTranslated = GetArticlesNotTranslated(authenticationCredentialsProviders, input.Locale);
             var client = new ZendeskClient(authenticationCredentialsProviders);
-            var request = new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations",
-                Method.Post, authenticationCredentialsProviders);
+            var translationDoesNotExist = notTranslated.Articles.Any(a => a.Id == long.Parse(input.ArticleId));
+            var request = translationDoesNotExist ?
+                new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations", Method.Post, authenticationCredentialsProviders) :
+                new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations/{input.Locale}", Method.Put, authenticationCredentialsProviders);
 
             var fileString = Encoding.ASCII.GetString(input.File);
             var doc = new HtmlDocument();
@@ -110,11 +116,8 @@ namespace Apps.Zendesk.Actions
             });
             var response = client.Execute(request);
 
-            return new BaseResponse()
-            {
-                StatusCode = ((int)response.StatusCode),
-                Details = response.Content
-            };
+            if (!response.IsSuccessful)
+                throw new Exception(response.Content);
         }
 
         [Action("Create or update article translation", Description = "Create or update article translation")]
