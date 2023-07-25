@@ -24,7 +24,7 @@ namespace Apps.Zendesk.Actions
                 Method.Get, authenticationCredentialsProviders);
             return new ListArticlesResponse()
             {
-                Articles = client.Get<ArticlesResponseWrapper>(request)?.Articles ?? new List<ArticleDto>()
+                Articles = client.Get<ArticlesResponseWrapper>(request)?.Articles.Select(Article.FromDto) ?? new List<Article>()
             };
         }
 
@@ -37,7 +37,7 @@ namespace Apps.Zendesk.Actions
                 Method.Get, authenticationCredentialsProviders);
             return new ListArticlesResponse()
             {
-                Articles = client.Get<ArticlesResponseWrapper>(request)?.Articles ?? new List<ArticleDto>()
+                Articles = client.Get<ArticlesResponseWrapper>(request)?.Articles.Select(Article.FromDto) ?? new List<Article>()
             };
         }
 
@@ -54,13 +54,13 @@ namespace Apps.Zendesk.Actions
         }
 
         [Action("Get article", Description = "Get article by Id")]
-        public ArticleDto? GetArticleById(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+        public Article? GetArticleById(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] GetArticleRequest input)
         {
             var client = new ZendeskClient(authenticationCredentialsProviders);
             var request = new ZendeskRequest($"/api/v2/help_center/{input.Locale}/articles/{input.ArticleId}",
                 Method.Get, authenticationCredentialsProviders);
-            return client.Get<ArticleResponseWrapper<ArticleDto>>(request)?.Article;
+            return Article.FromDto(client.Get<ArticleResponseWrapper<ArticleDto>>(request)?.Article);
         }
 
         [Action("Get article as HTML file", Description = "Get the translatable content of an article as a file")]
@@ -94,7 +94,7 @@ namespace Apps.Zendesk.Actions
         {
             var notTranslated = GetArticlesNotTranslated(authenticationCredentialsProviders, input.Locale);
             var client = new ZendeskClient(authenticationCredentialsProviders);
-            var translationDoesNotExist = notTranslated.Articles.Any(a => a.Id == long.Parse(input.ArticleId));
+            var translationDoesNotExist = notTranslated.Articles.Any(a => a.Id == input.ArticleId);
             var request = translationDoesNotExist ?
                 new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations", Method.Post, authenticationCredentialsProviders) :
                 new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations/{input.Locale}", Method.Put, authenticationCredentialsProviders);
@@ -125,7 +125,7 @@ namespace Apps.Zendesk.Actions
             [ActionParameter] TranslateArticleRequest input)
         {
             var notTranslated = GetArticlesNotTranslated(authenticationCredentialsProviders, input.Locale);
-            if(notTranslated.Articles.Any(a => a.Id == long.Parse(input.ArticleId)))
+            if(notTranslated.Articles.Any(a => a.Id == input.ArticleId))
             {
                 TranslateArticle(authenticationCredentialsProviders, input);
             }

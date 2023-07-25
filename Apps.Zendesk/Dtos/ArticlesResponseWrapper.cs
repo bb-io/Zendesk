@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Apps.Zendesk.Models.Responses
+namespace Apps.Zendesk.Dtos
 {
-    public class ArticleResponseWrapper<T>
+    public class ArticlesResponseWrapper
     {
-        public T Article { get; set; }
+        public IEnumerable<ArticleDto> Articles { get; set; }
     }
 }
