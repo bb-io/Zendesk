@@ -24,7 +24,21 @@ namespace Apps.Zendesk.Actions
                 Method.Get, authenticationCredentialsProviders);
             return new ListArticlesResponse()
             {
-                Articles = client.Get<ArticlesResponseWrapper>(request)?.Articles.Select(Article.FromDto) ?? new List<Article>()
+                Articles = client.Get<ArticlesResponseWrapper>(request)?.Articles.Select(Article.FromDto).Where(x => x != null) ?? new List<Article>()
+            };
+        }
+
+        [Action("Get changed articles", Description = "Get all articles that have been created or edited in the last x hours")]
+        public ListArticlesResponse GetChangedArticles(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders, [ActionParameter] ChangedArticlesRequest input)
+        {
+            var client = new ZendeskClient(authenticationCredentialsProviders);
+            var request = new ZendeskRequest($"/api/v2/help_center/articles",
+                Method.Get, authenticationCredentialsProviders);
+            var articles = client.Get<ArticlesResponseWrapper>(request)?.Articles.Select(Article.FromDto).Where(x => x != null) ?? new List<Article>();
+            var moment = DateTime.Now.AddHours(-1 * input.Hours);
+            return new ListArticlesResponse()
+            {
+                Articles = articles.Where(x => x.CreatedAt > moment || x.EditedAt > moment || x.UpdatedAt > moment)
             };
         }
 

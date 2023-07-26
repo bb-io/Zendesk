@@ -20,7 +20,7 @@ namespace Apps.Zendesk.Connections
                     //new ConnectionProperty("client_id"),
                     //new ConnectionProperty("client_secret"),
                     //new ConnectionProperty("redirect_uri"),
-                    new ConnectionProperty("api_endpoint"),
+                    new ConnectionProperty("api_endpoint") {DisplayName = "Base URL"},
                 }
             },
         };
