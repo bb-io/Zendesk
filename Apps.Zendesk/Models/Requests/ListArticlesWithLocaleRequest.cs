@@ -7,9 +7,12 @@ using System.Threading.Tasks;
 
 namespace Apps.Zendesk.Models.Requests
 {
-    public class ListArticlesRequest
+    public class ListArticlesWithLocaleRequest
     {
+        public string Locale { get; set; }
+
         [Display("Changed in the last hours")]
         public int? Hours { get; set; }
+        
     }
 }

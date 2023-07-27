@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 
 namespace Apps.Zendesk.Models.Requests
 {
-    public class ListArticlesRequest
+    public class GetMissingLocaleRequest
     {
-        [Display("Changed in the last hours")]
-        public int? Hours { get; set; }
+        [Display("Article ID")]
+        public string ArticleId { get; set; }
     }
 }

@@ -5,11 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Apps.Zendesk.Models.Requests
+namespace Apps.Zendesk.Models.Responses
 {
-    public class ListArticlesRequest
+    public class LocalesResponse
     {
-        [Display("Changed in the last hours")]
-        public int? Hours { get; set; }
+        [Display("Locales")]
+        public List<string> Locales { get; set; }
     }
 }

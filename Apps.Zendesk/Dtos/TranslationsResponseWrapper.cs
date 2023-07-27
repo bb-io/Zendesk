@@ -2,13 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Apps.Zendesk.Dtos
 {
-    public class ArticlesResponseWrapper : PaginatedResponse
+    public class TranslationsResponseWrapper : PaginatedResponse
     {
-        public IEnumerable<ArticleDto> Articles { get; set; }
+        public IEnumerable<TranslationDto> Translations { get; set; }
     }
 }

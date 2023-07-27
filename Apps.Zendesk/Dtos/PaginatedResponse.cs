@@ -7,8 +7,9 @@ using System.Threading.Tasks;
 
 namespace Apps.Zendesk.Dtos
 {
-    public class ArticlesResponseWrapper : PaginatedResponse
+    public class PaginatedResponse
     {
-        public IEnumerable<ArticleDto> Articles { get; set; }
+        [JsonPropertyName("next_page")]
+        public string? NextPage { get; set; }
     }
 }

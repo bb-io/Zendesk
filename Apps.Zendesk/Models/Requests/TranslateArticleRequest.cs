@@ -18,5 +18,7 @@ namespace Apps.Zendesk.Models.Requests
 
         [Display("Content (HTML)")]
         public string Body { get; set; }
+
+        public bool? Draft { get; set; }
     }
 }

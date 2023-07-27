@@ -62,6 +62,9 @@ namespace Apps.Zendesk.Dtos
         [JsonPropertyName("locale")]
         public string Locale { get; set; }
 
+        [JsonPropertyName("outdated_locales")]
+        public List<string> OutdatedLocales { get; set; }
+
         //public long PermissionGroupId { get; set; }
 
         [JsonPropertyName("body")]

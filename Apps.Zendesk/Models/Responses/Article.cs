@@ -62,6 +62,9 @@ namespace Apps.Zendesk.Models.Responses
         public string SourceLocale { get; set; }
         public string Locale { get; set; }
 
+        [Display("Outdated locales")]
+        public List<string> OutdatedLocales { get; set; }
+
         //public long PermissionGroupId { get; set; }
 
         [Display("Content (HTML)")]
@@ -87,6 +90,7 @@ namespace Apps.Zendesk.Models.Responses
                 Title= dto.Title,
                 SourceLocale = dto.SourceLocale,
                 Locale= dto.Locale,
+                OutdatedLocales= dto.OutdatedLocales,
                 Body= dto.Body,
             };
         }

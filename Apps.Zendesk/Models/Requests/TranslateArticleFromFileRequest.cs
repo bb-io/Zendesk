@@ -15,5 +15,7 @@ namespace Apps.Zendesk.Models.Requests
         public string ArticleId { get; set; }
 
         public byte[] File { get; set; }
+
+        public bool? Draft { get; set; }
     }
 }

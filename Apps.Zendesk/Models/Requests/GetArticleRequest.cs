@@ -12,6 +12,6 @@ namespace Apps.Zendesk.Models.Requests
         [Display("Article ID")]
         public string ArticleId { get; set; }
 
-        public string Locale { get; set; }
+        public string? Locale { get; set; }
     }
 }

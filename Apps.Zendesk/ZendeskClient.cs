@@ -1,4 +1,7 @@
-﻿using Blackbird.Applications.Sdk.Common.Authentication;
+﻿using Apps.OpenAI.Models.Responses;
+using Apps.Zendesk.Dtos;
+using Apps.Zendesk.Models.Responses;
+using Blackbird.Applications.Sdk.Common.Authentication;
 using RestSharp;
 using System;
 using System.Collections.Generic;
@@ -18,5 +21,20 @@ namespace Apps.Zendesk
             var url = authenticationCredentialsProviders.First(p => p.KeyName == "api_endpoint").Value;
             return new Uri(url);
         }
+
+        public List<T> GetPaginated<T>(ZendeskRequest request) where T : PaginatedResponse
+        {
+            var results = new List<T>();
+            string? next_page;
+            do
+            {
+                var result = this.Get<T>(request);
+                next_page = result.NextPage;
+                results.Add(result);
+            } while (next_page != null);
+
+            return results;
+        }
+
     }
 }
