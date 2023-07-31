@@ -16,9 +16,6 @@ namespace Apps.Zendesk.Models.Responses
         [Display("Public URL")]
         public string html_url { get; set; }
 
-        [Display("Path")]
-        public string Path => new Uri(html_url).AbsolutePath;
-
         [Display("Source ID")]
         public string SourceId { get; set; }
 
