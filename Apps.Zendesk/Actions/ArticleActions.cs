@@ -123,7 +123,7 @@ namespace Apps.Zendesk.Actions
 
             return new FileResponse()
             {
-                File = Encoding.ASCII.GetBytes(htmlFile)
+                File = Encoding.UTF8.GetBytes(htmlFile)
             };
         }
 
@@ -137,7 +137,7 @@ namespace Apps.Zendesk.Actions
                 new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations", Method.Post, authenticationCredentialsProviders) :
                 new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations/{input.Locale}", Method.Put, authenticationCredentialsProviders);
 
-            var fileString = Encoding.ASCII.GetString(input.File);
+            var fileString = Encoding.UTF8.GetString(input.File);
             var doc = new HtmlDocument();
             doc.LoadHtml(fileString);
             var title = doc.DocumentNode.SelectSingleNode("html/head/title").InnerText;
