@@ -1,11 +1,4 @@
-﻿using Apps.Zendesk.Dtos;
-using Apps.Zendesk.Models.Responses;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
+﻿using Apps.Zendesk.Models.Responses;
 
 namespace Apps.OpenAI.Models.Responses
 {

@@ -1,14 +1,7 @@
-﻿using Apps.OpenAI.Models.Responses;
-using Apps.Zendesk.Dtos;
-using Apps.Zendesk.Models.Responses;
+﻿using Apps.Zendesk.Models.Responses;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using RestSharp;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Apps.Zendesk.Actions
 {

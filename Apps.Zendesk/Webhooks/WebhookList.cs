@@ -5,7 +5,6 @@ using Apps.Zendesk.Webhooks.Payload.Articles;
 using Apps.Zendesk.Webhooks.Responses;
 using Blackbird.Applications.Sdk.Common.Webhooks;
 using Newtonsoft.Json;
-using System.Text.Json;
 
 namespace Apps.Zendesk.Webhooks
 {

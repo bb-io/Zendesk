@@ -1,13 +1,7 @@
-﻿using Apps.OpenAI.Models.Responses;
-using Apps.Zendesk.Dtos;
-using Apps.Zendesk.Models.Responses;
+﻿using Apps.Zendesk.Dtos;
 using Blackbird.Applications.Sdk.Common.Authentication;
+using Newtonsoft.Json;
 using RestSharp;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Apps.Zendesk
 {
@@ -28,12 +22,23 @@ namespace Apps.Zendesk
             string? next_page;
             do
             {
-                var result = this.Get<T>(request);
-                next_page = result.NextPage;
-                results.Add(result);
+                var response = Execute<T>(request);
+                
+                next_page = response.NextPage;
+                results.Add(response);
             } while (next_page != null);
 
             return results;
+        }
+        
+        public T Execute<T>(ZendeskRequest request)
+        {
+            var response = this.Execute(request);
+
+            if (!response.IsSuccessStatusCode)
+                throw new(response.Content);
+
+            return JsonConvert.DeserializeObject<T>(response.Content);
         }
 
     }

@@ -1,15 +1,7 @@
-﻿using Apps.Zendesk.Models.Responses;
-using Apps.Zendesk.Webhooks.Payload;
+﻿using Apps.Zendesk.Webhooks.Payload;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Webhooks;
 using RestSharp;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Apps.Zendesk.Webhooks.Handlers
 {

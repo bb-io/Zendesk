@@ -1,10 +1,4 @@
-﻿using Blackbird.Applications.Sdk.Common;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
+﻿using Newtonsoft.Json;
 
 namespace Apps.Zendesk.Dtos
 {
@@ -16,58 +10,58 @@ namespace Apps.Zendesk.Dtos
 
         public string html_url { get; set; }
 
-        [JsonPropertyName("author_id")]
+        [JsonProperty("author_id")]
         public long AuthorId { get; set; }
 
-        [JsonPropertyName("comments_disabled")]
+        [JsonProperty("comments_disabled")]
         public bool CommentsDisabled { get; set; }
 
-        [JsonPropertyName("draft")]
+        [JsonProperty("draft")]
         public bool Draft { get; set; }
 
-        [JsonPropertyName("promoted")]
+        [JsonProperty("promoted")]
         public bool Promoted { get; set; }
 
-        [JsonPropertyName("outdated")]
+        [JsonProperty("outdated")]
         public bool Outdated { get; set; }
 
-        [JsonPropertyName("position")]
+        [JsonProperty("position")]
         public int Position { get; set; }
 
-        [JsonPropertyName("vote_sum")]
+        [JsonProperty("vote_sum")]
         public int VoteSum { get; set; }
 
-        [JsonPropertyName("vote_count")]
+        [JsonProperty("vote_count")]
         public int VoteCount { get; set; }
 
         //public long SectionId { get; set; }
 
-        [JsonPropertyName("created_at")]
+        [JsonProperty("created_at")]
         public DateTime CreatedAt { get; set; }
 
-        [JsonPropertyName("updated_at")]
+        [JsonProperty("updated_at")]
         public DateTime UpdatedAt { get; set; }
 
-        [JsonPropertyName("edited_at")]
+        [JsonProperty("edited_at")]
         public DateTime EditedAt { get; set; }
 
         //public string Name { get; set; }
 
-        [JsonPropertyName("title")]
+        [JsonProperty("title")]
         public string Title { get; set; }
 
-        [JsonPropertyName("source_locale")]
+        [JsonProperty("source_locale")]
         public string SourceLocale { get; set; }
 
-        [JsonPropertyName("locale")]
+        [JsonProperty("locale")]
         public string Locale { get; set; }
 
-        [JsonPropertyName("outdated_locales")]
+        [JsonProperty("outdated_locales")]
         public List<string> OutdatedLocales { get; set; }
 
         //public long PermissionGroupId { get; set; }
 
-        [JsonPropertyName("body")]
+        [JsonProperty("body")]
         public string Body { get; set; }
     }
 }

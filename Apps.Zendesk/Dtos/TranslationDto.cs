@@ -1,24 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
+﻿using Newtonsoft.Json;
 
 namespace Apps.Zendesk.Dtos
 {
     public class TranslationDto
     {
-        [JsonPropertyName("id")]
+        [JsonProperty("id")]
         public string Id { get; set; }
 
-        [JsonPropertyName("html_url")]
+        [JsonProperty("html_url")]
         public string html_url { get; set; }
 
-        [JsonPropertyName("source_id")]
+        [JsonProperty("source_id")]
         public string SourceId { get; set; }
 
-        [JsonPropertyName("source_type")]
+        [JsonProperty("source_type")]
         public string SourceType { get; set; }
 
         public string Locale { get; set; }
@@ -28,10 +23,10 @@ namespace Apps.Zendesk.Dtos
         public bool Hidden { get; set; }
         public bool Outdated { get; set; }
 
-        [JsonPropertyName("created_at")]
+        [JsonProperty("created_at")]
         public DateTime CreatedAt { get; set; }
 
-        [JsonPropertyName("updated_at")]
+        [JsonProperty("updated_at")]
         public DateTime UpdatedAt { get; set; }
     }
 }

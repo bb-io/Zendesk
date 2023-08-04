@@ -9,8 +9,6 @@ using Newtonsoft.Json;
 using HtmlAgilityPack;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Apps.Zendesk.Dtos;
-using System.Linq;
-using Apps.Zendesk.Webhooks.Payload.Articles;
 
 namespace Apps.Zendesk.Actions
 {
