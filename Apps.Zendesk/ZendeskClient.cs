@@ -1,4 +1,5 @@
-﻿using Apps.Zendesk.Dtos;
+﻿using System.Net;
+using Apps.Zendesk.Dtos;
 using Apps.Zendesk.Models.Responses.Error;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Newtonsoft.Json;
@@ -45,7 +46,20 @@ namespace Apps.Zendesk
             if (response.IsSuccessStatusCode)
                 return response;
 
-            var error = JsonConvert.DeserializeObject<ErrorResponse>(response.Content)!;
+            var responseContent = response.Content!;
+
+            if (response.StatusCode is HttpStatusCode.NotFound)
+            {
+                var notFoundError = JsonConvert.DeserializeObject<NotFoundErrorResponse>(responseContent)!;
+
+                var exceptionMessage = notFoundError.Error == "InvalidEndpoint"
+                    ? "Feature is not allowed for your Zendesk instance"
+                    : notFoundError.Error;
+
+                throw new(exceptionMessage);
+            }
+
+            var error = JsonConvert.DeserializeObject<ErrorResponse>(responseContent)!;
             throw new($"{error.Error.Title}: {error.Error.Message}");
         }
 
