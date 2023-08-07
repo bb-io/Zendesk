@@ -1,6 +1,4 @@
-﻿using Apps.Zendesk.Models.Responses;
-
-namespace Apps.OpenAI.Models.Responses
+﻿namespace Apps.Zendesk.Models.Responses
 {
     public class ListArticlesResponse
     {

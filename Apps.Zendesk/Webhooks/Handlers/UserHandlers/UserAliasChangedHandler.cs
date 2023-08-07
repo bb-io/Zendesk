@@ -1,4 +1,4 @@
-namespace Apps.Zendesk.Webhooks.Handlers
+namespace Apps.Zendesk.Webhooks.Handlers.UserHandlers
 {
     public class UserAliasChangedHandler : BaseWebhookHandler
     {

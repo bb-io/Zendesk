@@ -1,5 +1,5 @@
-﻿using Apps.Zendesk.Webhooks.Handlers;
-using Apps.Zendesk.Webhooks.Handlers.ArticleHandlers;
+﻿using Apps.Zendesk.Webhooks.Handlers.ArticleHandlers;
+using Apps.Zendesk.Webhooks.Handlers.UserHandlers;
 using Apps.Zendesk.Webhooks.Payload;
 using Apps.Zendesk.Webhooks.Payload.Articles;
 using Apps.Zendesk.Webhooks.Responses;

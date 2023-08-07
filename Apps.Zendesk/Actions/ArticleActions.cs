@@ -1,6 +1,5 @@
 ﻿using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
-using Apps.OpenAI.Models.Responses;
 using Apps.Zendesk.Models.Requests;
 using RestSharp;
 using System.Text;

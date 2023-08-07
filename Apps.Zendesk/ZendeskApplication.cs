@@ -1,4 +1,4 @@
-﻿using Apps.Zendesk.Authorization.OAuth2;
+﻿using Apps.Zendesk.Auth.OAuth2;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
 

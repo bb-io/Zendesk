@@ -1,4 +1,5 @@
 ﻿using Apps.Zendesk.Dtos;
+using Apps.Zendesk.Models.Responses.Error;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Newtonsoft.Json;
 using RestSharp;
@@ -7,8 +8,11 @@ namespace Apps.Zendesk
 {
     public class ZendeskClient : RestClient
     {
-        public ZendeskClient(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders) : 
-            base(new RestClientOptions() { ThrowOnAnyError = false, BaseUrl = GetUri(authenticationCredentialsProviders) }) { }
+        public ZendeskClient(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders) :
+            base(new RestClientOptions()
+                { ThrowOnAnyError = false, BaseUrl = GetUri(authenticationCredentialsProviders) })
+        {
+        }
 
         private static Uri GetUri(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders)
         {
@@ -23,23 +27,32 @@ namespace Apps.Zendesk
             do
             {
                 var response = Execute<T>(request);
-                
+
                 next_page = response.NextPage;
                 results.Add(response);
             } while (next_page != null);
 
             return results;
         }
-        
+
         public T Execute<T>(ZendeskRequest request)
+            => ExecuteWithHandling<T>(request).Result;
+
+        public async Task<RestResponse> ExecuteWithHandling(ZendeskRequest request)
         {
-            var response = this.Execute(request);
+            var response = await ExecuteAsync(request);
 
-            if (!response.IsSuccessStatusCode)
-                throw new(response.Content);
+            if (response.IsSuccessStatusCode)
+                return response;
 
-            return JsonConvert.DeserializeObject<T>(response.Content);
+            var error = JsonConvert.DeserializeObject<ErrorResponse>(response.Content)!;
+            throw new($"{error.Error.Title}: {error.Error.Message}");
         }
 
+        public async Task<T> ExecuteWithHandling<T>(ZendeskRequest request)
+        {
+            var response = await ExecuteWithHandling(request);
+            return JsonConvert.DeserializeObject<T>(response.Content);
+        }
     }
 }
