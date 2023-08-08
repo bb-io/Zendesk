@@ -28,11 +28,10 @@ public class TicketActions
     [Action("Get ticket", Description = "Get specific ticket")]
     public TicketDto GetTicket(
         IEnumerable<AuthenticationCredentialsProvider> creds,
-        [ActionParameter] [Display("Ticket ID")]
-        string ticketId)
+        [ActionParameter] TicketIdRequest input)
     {
         var client = new ZendeskClient(creds);
-        var request = new ZendeskRequest($"/api/v2/tickets/{ticketId}", Method.Get, creds);
+        var request = new ZendeskRequest($"/api/v2/tickets/{input.TicketId}", Method.Get, creds);
 
         return client.Execute<TicketResponse>(request).Ticket;
     }
@@ -52,12 +51,11 @@ public class TicketActions
     [Action("Update ticket", Description = "Update specific ticket")]
     public TicketDto UpdateTicket(
         IEnumerable<AuthenticationCredentialsProvider> creds,
-        [ActionParameter] [Display("Ticket ID")]
-        string ticketId,
+        [ActionParameter] TicketIdRequest ticket,
         [ActionParameter] CreateTicketInput input)
     {
         var client = new ZendeskClient(creds);
-        var request = new ZendeskRequest($"/api/v2/tickets/{ticketId}", Method.Put, creds);
+        var request = new ZendeskRequest($"/api/v2/tickets/{ticket.TicketId}", Method.Put, creds);
         request.AddJsonBody(new ManageTicketRequest(input));
 
         return client.Execute<TicketResponse>(request).Ticket;
@@ -66,11 +64,10 @@ public class TicketActions
     [Action("Delete ticket", Description = "Delete specific ticket")]
     public Task DeleteTicket(
         IEnumerable<AuthenticationCredentialsProvider> creds,
-        [ActionParameter] [Display("Ticket ID")]
-        string ticketId)
+        [ActionParameter] TicketIdRequest input)
     {
         var client = new ZendeskClient(creds);
-        var request = new ZendeskRequest($"/api/v2/tickets/{ticketId}", Method.Delete, creds);
+        var request = new ZendeskRequest($"/api/v2/tickets/{input.TicketId}", Method.Delete, creds);
 
         return client.ExecuteWithHandling(request);
     }

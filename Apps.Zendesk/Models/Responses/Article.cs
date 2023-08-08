@@ -5,7 +5,7 @@ namespace Apps.Zendesk.Models.Responses
 {
     public class Article
     {
-        [Display("Article ID")]
+        [Display("Article")]
         public string Id { get; set; }
 
         //public string Url { get; set; }

@@ -9,7 +9,8 @@ namespace Apps.Zendesk.Actions
     public class HelpCenterActions
     {
         [Action("Get helpcenter locales", Description = "Get all the activated helpcenter locales")]
-        public AllLocalesResponse ListArticles(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders)
+        public AllLocalesResponse ListLocales(
+            IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders)
         {
             var client = new ZendeskClient(authenticationCredentialsProviders);
             var request = new ZendeskRequest($"/api/v2/help_center/locales",
