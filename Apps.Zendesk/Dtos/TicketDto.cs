@@ -16,7 +16,7 @@ public class TicketDto
     public IEnumerable<string> CollaboratorIds { get; set; }
 
     [JsonProperty("created_at")]
-    [Display("Created фt")]
+    [Display("Created at")]
     public DateTime CreatedAt { get; set; }
 
     [JsonProperty("custom_status_id")]
