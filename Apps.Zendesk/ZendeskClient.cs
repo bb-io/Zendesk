@@ -39,7 +39,7 @@ namespace Apps.Zendesk
         public T Execute<T>(ZendeskRequest request)
             => ExecuteWithHandling<T>(request).Result;
 
-        public async Task<RestResponse> ExecuteWithHandling(ZendeskRequest request)
+        public async Task<RestResponse> ExecuteWithHandling(RestRequest request)
         {
             var response = await ExecuteAsync(request);
 
@@ -63,7 +63,7 @@ namespace Apps.Zendesk
             throw new($"{error.Error.Title}: {error.Error.Message}");
         }
 
-        public async Task<T> ExecuteWithHandling<T>(ZendeskRequest request)
+        public async Task<T> ExecuteWithHandling<T>(RestRequest request)
         {
             var response = await ExecuteWithHandling(request);
             return JsonConvert.DeserializeObject<T>(response.Content);
