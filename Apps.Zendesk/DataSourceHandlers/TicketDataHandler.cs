@@ -1,8 +1,11 @@
 ﻿using Apps.Zendesk.Actions;
+using Apps.Zendesk.Models.Responses;
+using Apps.Zendesk.Models.Responses.Wrappers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using RestSharp;
 
 namespace Apps.Zendesk.DataSourceHandlers;
 
@@ -17,14 +20,25 @@ public class TicketDataHandler : BaseInvocable, IDataSourceHandler
 
     public Dictionary<string, string> GetData(DataSourceContext context)
     {
-        var actions = new TicketActions();
-        var articles = actions.ListTickets(Creds);
+        var client = new ZendeskClient(Creds);
+        IEnumerable<Ticket> tickets;
+        if (string.IsNullOrEmpty(context.SearchString))
+        {
+            var request = new ZendeskRequest("/api/v2/tickets", Method.Get, Creds);
+            var result = client.Execute<MultipleTickets>(request);
+            tickets = result.Tickets;
+        }
+        else
+        {
+            var request = new ZendeskRequest("/api/v2/search", Method.Get, Creds);
+            request.AddQueryParameter("query", context.SearchString);
+            var result = client.Execute<SearchResponse<Ticket>>(request);
+            tickets = result.Results;
+        }
 
-        return articles.Tickets
-            .Where(x => context.SearchString == null ||
-                        x.Subject.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(x => x.CreatedAt)
-            .Take(20)
-            .ToDictionary(x => x.Id, x => x.Subject);
+        return tickets
+            .OrderByDescending(x => x.UpdatedAt)
+            .ToDictionary(x => x.Id.ToString(), x => x.Subject);
+
     }
 }

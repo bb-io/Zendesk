@@ -19,7 +19,7 @@ namespace Apps.Zendesk.Webhooks.Handlers
         {
             var client = new ZendeskClient(authenticationCredentialsProvider);
             var request = new ZendeskRequest($"/api/v2/webhooks", Method.Post, authenticationCredentialsProvider);
-            request.AddJsonBody(new
+            request.AddNewtonJson(new
             {
                 webhook = new
                 {

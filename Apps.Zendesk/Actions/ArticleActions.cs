@@ -4,132 +4,155 @@ using Apps.Zendesk.Models.Requests;
 using RestSharp;
 using System.Text;
 using Apps.Zendesk.Models.Responses;
-using Newtonsoft.Json;
-using HtmlAgilityPack;
 using Blackbird.Applications.Sdk.Common.Actions;
-using Apps.Zendesk.Dtos;
+using Blackbird.Applications.Sdk.Common.Invocation;
+using Apps.Zendesk.Models.Identifiers;
+using Apps.Zendesk.Models.Responses.Wrappers;
+using System.Text.Json;
+using Newtonsoft.Json;
 
 namespace Apps.Zendesk.Actions
 {
     [ActionList]
-    public class ArticleActions
+    public class ArticleActions : BaseInvocable
     {
-        [Action("Get all articles", Description = "List all articles")]
-        public ListArticlesResponse ListArticles(
-            IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-            [ActionParameter] ListArticlesRequest input)
+        private IEnumerable<AuthenticationCredentialsProvider> Creds =>
+            InvocationContext.AuthenticationCredentialsProviders;
+
+        public ArticleActions(InvocationContext invocationContext) : base(invocationContext)
         {
-            var client = new ZendeskClient(authenticationCredentialsProviders);
-
-            var endpoint = "/api/v2/help_center/articles";
-            if (input.Hours != null)
-            {
-                var currentTime = DateTime.UtcNow.AddHours(-1 * (int)input.Hours);
-                var unixTime = ((DateTimeOffset)currentTime).ToUnixTimeSeconds();
-                endpoint = $"/api/v2/help_center/incremental/articles?start_time={unixTime}";
-            }
-
-            var request = new ZendeskRequest(endpoint,
-                Method.Get, authenticationCredentialsProviders);
-            var results = client.GetPaginated<ArticlesResponseWrapper>(request);
-            var articles = results.SelectMany(x => x.Articles).Select(Article.FromDto).Where(x => x != null);
-
-            return new ListArticlesResponse
-            {
-                Articles = articles
-            };
         }
 
-        [Action("Get articles not translated in language",
-            Description = "Get articles not translated in specific language")]
-        public ListArticlesResponse GetArticlesNotTranslated(
-            IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-            [ActionParameter] ListArticlesWithLocaleRequest input)
+        [Action("Get all articles", Description = "Get all articles that have changed recently, optionally those that are missing translations")]
+        public async Task<MultipleArticles> GetAllSections([ActionParameter] HoursIdentifier hours, [ActionParameter] OptionalMissingLocaleIdentifier missingLocalesInput, [ActionParameter] OptionalCategoryIdentifier category)
         {
-            var allArticles = ListArticles(authenticationCredentialsProviders,
-                new ListArticlesRequest { Hours = input.Hours }).Articles;
-            var articlesWithMissingLocales = new List<Article>();
+            var client = new ZendeskClient(Creds);
 
-            foreach (var article in allArticles)
+            List<Article> articles = new List<Article>();
+
+            var targetTime = DateTime.UtcNow.AddHours(-1 * hours.Hours);
+            var unixTime = ((DateTimeOffset)targetTime).ToUnixTimeSeconds();
+
+            if (category.Id != null)
             {
-                var missingLocales = GetArticleMissingTranslations(authenticationCredentialsProviders,
-                    new GetMissingLocaleRequest { ArticleId = article.Id })?.Locales;
-                if (missingLocales.Contains(input.Locale))
-                    articlesWithMissingLocales.Add(article);
+                var endpoint = $"/api/v2/help_center/categories/{category.Id}/articles";
+                var request = new ZendeskRequest(endpoint, Method.Get, Creds);
+                var response = client.GetPaginated<MultipleArticles>(request).SelectMany(x => x.Articles);
+                articles.AddRange(response.Where(x => x.UpdatedAt >= targetTime));
+            } else
+            {
+                var endpoint = $"/api/v2/help_center/incremental/articles?start_time={unixTime}";
+                var request = new ZendeskRequest("/api/v2/help_center/incremental/articles", Method.Get, Creds);
+                request.AddQueryParameter("start_time", unixTime);
+                request.AddQueryParameter("per_page", 100);
+                var response = client.GetPaginated<MultipleArticles>(request).SelectMany(x => x.Articles);
+                articles.AddRange(response);
+            }            
+
+            if (missingLocalesInput.Locale != null)
+            {
+                var filteredArticles = new List<Article>();
+                foreach (var article in articles)
+                {
+                    var missingLocales = await GetArticleMissingTranslations(new ArticleIdentifier { Id = article.Id });
+                    if (missingLocales.Locales.Contains(missingLocalesInput.Locale))
+                        filteredArticles.Add(article);
+                }
+                articles = filteredArticles;
             }
 
-            return new ListArticlesResponse()
-            {
-                Articles = articlesWithMissingLocales
-            };
+            return new MultipleArticles { Articles = articles };
         }
 
         [Action("Get article", Description = "Get information on a specific article")]
-        public Article? GetArticleById(
-            IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-            [ActionParameter] GetArticleRequest input)
+        public async Task<Article> GetArticle([ActionParameter] ArticleIdentifier article)
         {
-            var client = new ZendeskClient(authenticationCredentialsProviders);
-            var endpoint = input.Locale == null
-                ? $"/api/v2/help_center/articles/{input.ArticleId}"
-                : $"/api/v2/help_center/{input.Locale}/articles/{input.ArticleId}";
-            var request = new ZendeskRequest(endpoint,
-                Method.Get, authenticationCredentialsProviders);
-            return Article.FromDto(client.Get<ArticleResponseWrapper<ArticleDto>>(request)?.Article);
+            var client = new ZendeskClient(Creds);
+            var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}", Method.Get, Creds);
+            var response = await client.ExecuteWithHandling<SingleArticle>(request);
+            return response.Article;
+        }
+
+
+        [Action("Create article", Description = "Create a new article")]
+        public async Task<Article> CreateArticle(
+            [ActionParameter] LocaleIdentifier locale, 
+            [ActionParameter] SectionIdentifier section, 
+            [ActionParameter] CreateArticleRequest input,
+            [ActionParameter] NotifySubscribersRequest notify
+            )
+        {
+            var client = new ZendeskClient(Creds);
+            var request = new ZendeskRequest($"/api/v2/help_center/{locale.Locale}/sections/{section.Id}/articles", Method.Post, Creds);
+            request.AddNewtonJson(new { notify_subscribers = notify.NotifySubscribers, article = input });
+            var response = await client.ExecuteWithHandling<SingleArticle>(request);
+            return response.Article;
+        }
+
+        [Action("Update article", Description = "Update an article")]
+        public async Task<Article> UpdateArticle([ActionParameter] ArticleIdentifier article, [ActionParameter] UpdateArticleRequest input)
+        {
+            var client = new ZendeskClient(Creds);
+            var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}", Method.Put, Creds);
+            request.AddNewtonJson(new { article = input });
+            var response = await client.ExecuteWithHandling<SingleArticle>(request);
+            return response.Article;
+        }
+
+        [Action("Archive article", Description = "Archive an article")]
+        public async Task DeleteArticle([ActionParameter] ArticleIdentifier article)
+        {
+            var client = new ZendeskClient(Creds);
+            var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}", Method.Delete, Creds);
+            await client.ExecuteWithHandling(request);
+        }
+
+        [Action("Get all article locales", Description = "Get all existing locales of this article")]
+        public async Task<MultipleTranslations> GetArticleTranslations([ActionParameter] ArticleIdentifier article)
+        {
+            var client = new ZendeskClient(Creds);
+            var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}/translations", Method.Get, Creds);
+            var translations = client.GetPaginated<MultipleTranslations>(request).SelectMany(x => x.Translations);
+            return new MultipleTranslations { Translations = translations };
+        }
+
+        [Action("Get article translation", Description = "Get the translation of an article for a specific locale")]
+        public async Task<SingleTranslation> GetArticleTranslation([ActionParameter] ArticleIdentifier articles, [ActionParameter] LocaleIdentifier locale)
+        {
+            var client = new ZendeskClient(Creds);
+            var request = new ZendeskRequest($"/api/v2/help_center/articles/{articles.Id}/translations/{locale.Locale}", Method.Get, Creds);
+            return await client.ExecuteWithHandling<SingleTranslation>(request);
         }
 
         [Action("Get article missing translations", Description = "Get the locales that are missing for this article")]
-        public LocalesResponse? GetArticleMissingTranslations(
-            IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-            [ActionParameter] GetMissingLocaleRequest input)
+        public async Task<MissingLocales> GetArticleMissingTranslations([ActionParameter] ArticleIdentifier article)
         {
-            var client = new ZendeskClient(authenticationCredentialsProviders);
-            var request = new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations/missing",
-                Method.Get, authenticationCredentialsProviders);
-            return client.Get<LocalesResponse>(request);
+            var client = new ZendeskClient(Creds);
+            var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}/translations/missing", Method.Get, Creds);
+            return await client.ExecuteWithHandling<MissingLocales>(request);
         }
 
-        [Action("Get article translations", Description = "Get all translations for an article")]
-        public TranslationsResponse? GetArticleTranslations(
-            IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-            [ActionParameter] GetArticleTranslationsRequest input)
+        [Action("Update article translation", Description = "Updates the translation for an article, creates a new translation if there is none")]
+        public async Task<Translation> TranslateArticle([ActionParameter] ArticleIdentifier article, [ActionParameter] TranslationRequest input)
         {
-            var client = new ZendeskClient(authenticationCredentialsProviders);
-            var request = new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations",
-                Method.Get, authenticationCredentialsProviders);
-
-            var results = client.GetPaginated<TranslationsResponseWrapper>(request);
-            var translations = results.SelectMany(x => x.Translations).Select(Translation.FromDto)
-                .Where(x => x != null);
-
-            return new TranslationsResponse
-            {
-                Translations = translations
-            };
+            var client = new ZendeskClient(Creds);
+            var missingLocales = await GetArticleMissingTranslations(article);
+            var isLocaleMissing = missingLocales.Locales.Contains(input.Locale);
+            var request = ZendeskRequest.CreateTranslationUpsertRequest(isLocaleMissing, $"articles/{article.Id}", input.Locale, Creds);
+            request.AddNewtonJson(input.Convert(isLocaleMissing));
+            var response = await client.ExecuteWithHandling<SingleTranslation>(request);
+            return response.Translation;
         }
+
 
         [Action("Get article as HTML file", Description = "Get the translatable content of an article as a file")]
-        public FileResponse GetArticleAsFile(
-            IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-            [ActionParameter] GetArticleRequest input)
+        public async Task<FileResponse> GetArticleAsFile([ActionParameter] ArticleIdentifier article)
         {
-            var client = new ZendeskClient(authenticationCredentialsProviders);
-            var endpoint = input.Locale == null
-                ? $"/api/v2/help_center/articles/{input.ArticleId}"
-                : $"/api/v2/help_center/{input.Locale}/articles/{input.ArticleId}";
-            var request = new ZendeskRequest(endpoint,
-                Method.Get, authenticationCredentialsProviders);
-            var response = client.Get(request);
+            var client = new ZendeskClient(Creds);
+            var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}", Method.Get, Creds);
+            var response = await client.ExecuteWithHandling<SingleArticle>(request);
 
-            if (!response.IsSuccessful)
-                throw new Exception(response.Content);
-
-            dynamic parsedArticle = JsonConvert.DeserializeObject(response.Content);
-
-            string title = parsedArticle.article.title;
-            string body = parsedArticle.article.body;
-
-            string htmlFile = $"<html><head><title>{title}</title></head><body>{body}</body></html>";
+            string htmlFile = $"<html><head><title>{response.Article.Title}</title></head><body>{response.Article.Body}</body></html>";
 
             return new FileResponse()
             {
@@ -137,71 +160,18 @@ namespace Apps.Zendesk.Actions
             };
         }
 
-        [Action("Translate article from HTML file",
-            Description = "Create a new translation for an article based on a file input")]
-        public void TranslateArticleFromFile(
-            IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-            [ActionParameter] TranslateArticleFromFileRequest input)
+        [Action("Update article translation from HTML file",
+            Description = "Updates the translation for an article, creates a new translation if there is none. Takes a translated HTML file as input")]
+        public async Task<Translation> TranslateArticleFromFile([ActionParameter] ArticleIdentifier article, [ActionParameter] FileTranslationRequest input)
         {
-            var client = new ZendeskClient(authenticationCredentialsProviders);
-            var missingLocales = GetArticleMissingTranslations(authenticationCredentialsProviders,
-                new GetMissingLocaleRequest { ArticleId = input.ArticleId })?.Locales;
-            var request = missingLocales.Contains(input.Locale)
-                ? new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations", Method.Post,
-                    authenticationCredentialsProviders)
-                : new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations/{input.Locale}",
-                    Method.Put, authenticationCredentialsProviders);
-
-            var fileString = Encoding.UTF8.GetString(input.File);
-            var doc = new HtmlDocument();
-            doc.LoadHtml(fileString);
-            var title = doc.DocumentNode.SelectSingleNode("html/head/title").InnerText;
-            var body = doc.DocumentNode.SelectSingleNode("/html/body").InnerHtml;
-
-            request.AddJsonBody(new
-            {
-                translation = new
-                {
-                    locale = input.Locale,
-                    title = title,
-                    body = body,
-                    draft = input.Draft
-                }
-            });
-            var response = client.Execute(request);
-
-            if (!response.IsSuccessful)
-                throw new Exception(response.Content);
+            var client = new ZendeskClient(Creds);
+            var missingLocales = await GetArticleMissingTranslations(article);
+            var isLocaleMissing = missingLocales.Locales.Contains(input.Locale);
+            var request = ZendeskRequest.CreateTranslationUpsertRequest(isLocaleMissing, $"articles/{article.Id}", input.Locale, Creds);
+            request.AddNewtonJson(input.Convert(isLocaleMissing));
+            var response = await client.ExecuteWithHandling<SingleTranslation>(request);
+            return response.Translation;
         }
 
-        [Action("Translate article", Description = "Create or update an article translation")]
-        public void CreateOrUpdateTranslation(
-            IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-            [ActionParameter] TranslateArticleRequest input)
-        {
-            var client = new ZendeskClient(authenticationCredentialsProviders);
-            var missingLocales = GetArticleMissingTranslations(authenticationCredentialsProviders,
-                new GetMissingLocaleRequest { ArticleId = input.ArticleId })?.Locales;
-            var request = missingLocales.Contains(input.Locale)
-                ? new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations", Method.Post,
-                    authenticationCredentialsProviders)
-                : new ZendeskRequest($"/api/v2/help_center/articles/{input.ArticleId}/translations/{input.Locale}",
-                    Method.Put, authenticationCredentialsProviders);
-
-            request.AddJsonBody(new
-            {
-                translation = new
-                {
-                    locale = input.Locale,
-                    title = input.Title,
-                    body = input.Body,
-                    draft = input.Draft
-                }
-            });
-            var response = client.Execute(request);
-
-            if (!response.IsSuccessful)
-                throw new Exception(response.Content);
-        }
     }
 }

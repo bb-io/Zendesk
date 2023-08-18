@@ -1,8 +1,10 @@
 ﻿using Apps.Zendesk.Actions;
+using Apps.Zendesk.Models.Responses;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using RestSharp;
 
 namespace Apps.Zendesk.DataSourceHandlers;
 
@@ -17,10 +19,11 @@ public class LocaleDataHandler : BaseInvocable, IDataSourceHandler
 
     public Dictionary<string, string> GetData(DataSourceContext context)
     {
-        var actions = new HelpCenterActions();
-        var articles = actions.ListLocales(Creds);
+        var client = new ZendeskClient(Creds);
+        var request = new ZendeskRequest($"/api/v2/help_center/locales", Method.Get, Creds);
+        var response = client.Execute<EnabledLocales>(request);
 
-        return articles.Locales
+        return response.Locales
             .Where(x => context.SearchString == null ||
                         x.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
             .ToDictionary(x => x, x => x);

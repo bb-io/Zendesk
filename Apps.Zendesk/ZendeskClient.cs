@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using Apps.Zendesk.Dtos;
+using Apps.Zendesk.Models.Responses;
 using Apps.Zendesk.Models.Responses.Error;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Newtonsoft.Json;
@@ -23,6 +23,7 @@ namespace Apps.Zendesk
 
         public List<T> GetPaginated<T>(ZendeskRequest request) where T : PaginatedResponse
         {
+            request.AddQueryParameter("page[size]", 100);
             var results = new List<T>();
             string? next_page;
             do
@@ -37,7 +38,7 @@ namespace Apps.Zendesk
         }
 
         public T Execute<T>(ZendeskRequest request)
-            => ExecuteWithHandling<T>(request).Result;
+            => ExecuteWithHandling<T>(request).GetAwaiter().GetResult();
 
         public async Task<RestResponse> ExecuteWithHandling(RestRequest request)
         {
@@ -59,8 +60,17 @@ namespace Apps.Zendesk
                 throw new(exceptionMessage);
             }
 
-            var error = JsonConvert.DeserializeObject<ErrorResponse>(responseContent)!;
-            throw new($"{error.Error.Title}: {error.Error.Message}");
+            string error;
+            try
+            {
+                var serialized = JsonConvert.DeserializeObject<ErrorResponse>(responseContent)!;
+                error = $"{serialized.Error.Title}: {serialized.Error.Message}";
+            }
+            catch(Exception ex)
+            {
+                error = responseContent;
+            }
+            throw new(error);
         }
 
         public async Task<T> ExecuteWithHandling<T>(RestRequest request)

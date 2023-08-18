@@ -7,7 +7,7 @@ namespace Apps.Zendesk.Auth.OAuth2
     {
         public string GetAuthorizationUrl(Dictionary<string, string> values)
         {
-            string oauthUrl = $"{values["api_endpoint"].TrimEnd('/')}/oauth/authorizations/new";
+            string oauthUrl = $"{new Uri(values["api_endpoint"]).GetLeftPart(UriPartial.Authority).TrimEnd('/')}/oauth/authorizations/new";
             var parameters = new Dictionary<string, string>
             {
                 { "client_id", ApplicationConstants.ClientId},

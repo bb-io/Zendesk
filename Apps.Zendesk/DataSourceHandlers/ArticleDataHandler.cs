@@ -1,8 +1,11 @@
 ﻿using Apps.Zendesk.Actions;
+using Apps.Zendesk.Models.Responses;
+using Apps.Zendesk.Models.Responses.Wrappers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using RestSharp;
 
 namespace Apps.Zendesk.DataSourceHandlers;
 
@@ -11,20 +14,25 @@ public class ArticleDataHandler : BaseInvocable, IDataSourceHandler
     private IEnumerable<AuthenticationCredentialsProvider> Creds =>
         InvocationContext.AuthenticationCredentialsProviders;
 
-    public ArticleDataHandler(InvocationContext invocationContext) : base(invocationContext)
-    {
-    }
+    public ArticleDataHandler(InvocationContext invocationContext) : base(invocationContext) {}
 
     public Dictionary<string, string> GetData(DataSourceContext context)
     {
-        var actions = new ArticleActions();
-        var articles = actions.ListArticles(Creds, new());
+        var client = new ZendeskClient(Creds);
+        IEnumerable<Article> articles;
+        if (string.IsNullOrEmpty(context.SearchString))
+        {
+            var request = new ZendeskRequest("/api/v2/help_center/articles", Method.Get, Creds);
+            articles = client.Execute<MultipleArticles>(request).Articles;
+        } else
+        {
+            var request = new ZendeskRequest("/api/v2/help_center/articles/search", Method.Get, Creds);
+            request.AddQueryParameter("query", context.SearchString);
+            articles = client.Execute<SearchResponse<Article>>(request).Results;
+        }
 
-        return articles.Articles
-            .Where(x => context.SearchString == null ||
-                        x.Title.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(x => x.CreatedAt)
-            .Take(20)
-            .ToDictionary(x => x.Id, x => x.Title);
+        return articles
+            .OrderByDescending(x => x.UpdatedAt)
+            .ToDictionary(x => x.Id.ToString(), x => x.Title);
     }
 }

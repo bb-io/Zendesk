@@ -23,7 +23,7 @@ namespace Apps.Zendesk.Auth.OAuth2
             Dictionary<string, string> values, 
             CancellationToken cancellationToken)
         {
-            TokenUrl = $"{values["api_endpoint"].TrimEnd('/')}/oauth/tokens";
+            TokenUrl = $"{new Uri(values["api_endpoint"]).GetLeftPart(UriPartial.Authority).TrimEnd('/')}/oauth/tokens";
             const string grant_type = "authorization_code";
 
             var bodyParameters = new Dictionary<string, string>

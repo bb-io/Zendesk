@@ -32,11 +32,11 @@ namespace Apps.Zendesk.Connections
                 "Authorization",
                 $"Bearer {token.Value}"
             );
-            var url = values.First(v => v.Key == "api_endpoint");
+            var url = new Uri(values.First(v => v.Key == "api_endpoint").Value).GetLeftPart(UriPartial.Authority);
             yield return new AuthenticationCredentialsProvider(
                 AuthenticationCredentialsRequestLocation.None,
                 "api_endpoint",
-                url.Value
+                url
             );
         }
     }
