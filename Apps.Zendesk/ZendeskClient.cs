@@ -64,7 +64,7 @@ namespace Apps.Zendesk
             try
             {
                 var serialized = JsonConvert.DeserializeObject<ErrorResponse>(responseContent)!;
-                error = $"{serialized.Error.Title}: {serialized.Error.Message}";
+                error = $"{serialized.Error.Title}: {serialized.Error.Message} ({response.StatusCode})";
             }
             catch(Exception ex)
             {

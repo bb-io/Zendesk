@@ -26,7 +26,7 @@ namespace Apps.Zendesk.Actions
         }
 
         [Action("Get all sections", Description = "Get all sections, optionally those that are missing translations")]
-        public async Task<MultipleSections> GetAllSections([ActionParameter] OptionalMissingLocaleIdentifier missingLocalesInput, [ActionParameter] OptionalCategoryIdentifier category)
+        public async Task<List<Section>> GetAllSections([ActionParameter] OptionalMissingLocaleIdentifier missingLocalesInput, [ActionParameter] OptionalCategoryIdentifier category)
         {
             var client = new ZendeskClient(Creds);
             var endpoint = category.Id == null ? $"/api/v2/help_center/sections" : $"/api/v2/help_center/categories/{category.Id}/sections";
@@ -45,7 +45,7 @@ namespace Apps.Zendesk.Actions
                 sections = filteredSections;
             }
 
-            return new MultipleSections { Sections = sections };
+            return sections.ToList();
         }
 
         [Action("Get section", Description = "Get information on a specific section")]
@@ -86,20 +86,21 @@ namespace Apps.Zendesk.Actions
         }
 
         [Action("Get all section translations", Description = "Get all existing translations of this section")]
-        public async Task<MultipleTranslations> GetSectionTranslations([ActionParameter] SectionIdentifier section)
+        public async Task<List<Translation>> GetSectionTranslations([ActionParameter] SectionIdentifier section)
         {
             var client = new ZendeskClient(Creds);
             var request = new ZendeskRequest($"/api/v2/help_center/sections/{section.Id}/translations", Method.Get, Creds);
             var translations = client.GetPaginated<MultipleTranslations>(request).SelectMany(x => x.Translations);
-            return new MultipleTranslations { Translations = translations };
+            return translations.ToList();
         }
 
         [Action("Get section translation", Description = "Get the translation of a section for a specific locale")]
-        public async Task<SingleTranslation> GetSectionTranslation([ActionParameter] SectionIdentifier section, [ActionParameter] LocaleIdentifier locale)
+        public async Task<Translation> GetSectionTranslation([ActionParameter] SectionIdentifier section, [ActionParameter] LocaleIdentifier locale)
         {
             var client = new ZendeskClient(Creds);
             var request = new ZendeskRequest($"/api/v2/help_center/sections/{section.Id}/translations/{locale.Locale}", Method.Get, Creds);
-            return await client.ExecuteWithHandling<SingleTranslation>(request);
+            var response = await client.ExecuteWithHandling<SingleTranslation>(request);
+            return response.Translation;
         }
 
         [Action("Get section missing translations", Description = "Get the locales that are missing for this section")]

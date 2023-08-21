@@ -22,7 +22,7 @@ namespace Apps.Zendesk.Actions
 
 
         [Action("Get all categories", Description = "Get all categories, optionally those that are missing translations")]
-        public async Task<MultipleCategories> GetAllCategories([ActionParameter] OptionalMissingLocaleIdentifier missingLocalesInput)
+        public async Task<List<Category>> GetAllCategories([ActionParameter] OptionalMissingLocaleIdentifier missingLocalesInput)
         {
             var client = new ZendeskClient(Creds);
             var endpoint = $"/api/v2/help_center/categories";
@@ -41,7 +41,7 @@ namespace Apps.Zendesk.Actions
                 categories = filteredCategories;
             }
 
-            return new MultipleCategories { Categories = categories };
+            return categories.ToList();
         }
 
         [Action("Get category", Description = "Get information on a specific category")]
@@ -55,12 +55,12 @@ namespace Apps.Zendesk.Actions
         }
 
         [Action("Get category articles", Description = "Get all articles that belong to a specific category")]
-        public async Task<MultipleArticles> GetArticles([ActionParameter] CategoryIdentifier category)
+        public async Task<List<Article>> GetArticles([ActionParameter] CategoryIdentifier category)
         {
             var client = new ZendeskClient(Creds);
             var request = new ZendeskRequest($"/api/v2/help_center/categories/{category.Id}/articles", Method.Get, Creds);
             var articles = client.GetPaginated<MultipleArticles>(request).SelectMany(x => x.Articles);
-            return new MultipleArticles { Articles = articles };
+            return articles.ToList();
         }
 
         [Action("Create category", Description = "Create a new category")]
@@ -92,20 +92,21 @@ namespace Apps.Zendesk.Actions
         }
 
         [Action("Get all category translations", Description = "Get all existing translations of this category")]
-        public async Task<MultipleTranslations> GetCategoryTranslations([ActionParameter] CategoryIdentifier category)
+        public async Task<List<Translation>> GetCategoryTranslations([ActionParameter] CategoryIdentifier category)
         {
             var client = new ZendeskClient(Creds);
             var request = new ZendeskRequest($"/api/v2/help_center/categories/{category.Id}/translations", Method.Get, Creds);
             var translations = client.GetPaginated<MultipleTranslations>(request).SelectMany(x => x.Translations);
-            return new MultipleTranslations { Translations= translations };
+            return translations.ToList();
         }
 
         [Action("Get category translation", Description = "Get the translation of a category for a specific locale")]
-        public async Task<SingleTranslation> GetCategoryTranslation([ActionParameter] CategoryIdentifier category, [ActionParameter] LocaleIdentifier locale)
+        public async Task<Translation> GetCategoryTranslation([ActionParameter] CategoryIdentifier category, [ActionParameter] LocaleIdentifier locale)
         {
             var client = new ZendeskClient(Creds);
             var request = new ZendeskRequest($"/api/v2/help_center/categories/{category.Id}/translations/{locale.Locale}", Method.Get, Creds);
-            return await client.ExecuteWithHandling<SingleTranslation>(request);
+            var response = await client.ExecuteWithHandling<SingleTranslation>(request);
+            return response.Translation;
         }
 
         [Action("Get category missing translations", Description = "Get the locales that are missing for this category")]

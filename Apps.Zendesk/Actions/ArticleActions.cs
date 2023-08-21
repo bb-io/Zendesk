@@ -24,7 +24,7 @@ namespace Apps.Zendesk.Actions
         }
 
         [Action("Get all articles", Description = "Get all articles that have changed recently, optionally those that are missing translations")]
-        public async Task<MultipleArticles> GetAllSections([ActionParameter] HoursIdentifier hours, [ActionParameter] OptionalMissingLocaleIdentifier missingLocalesInput, [ActionParameter] OptionalCategoryIdentifier category)
+        public async Task<List<Article>> GetAllSections([ActionParameter] HoursIdentifier hours, [ActionParameter] OptionalMissingLocaleIdentifier missingLocalesInput, [ActionParameter] OptionalCategoryIdentifier category)
         {
             var client = new ZendeskClient(Creds);
 
@@ -61,7 +61,7 @@ namespace Apps.Zendesk.Actions
                 articles = filteredArticles;
             }
 
-            return new MultipleArticles { Articles = articles };
+            return articles.ToList();
         }
 
         [Action("Get article", Description = "Get information on a specific article")]
@@ -108,20 +108,21 @@ namespace Apps.Zendesk.Actions
         }
 
         [Action("Get all article locales", Description = "Get all existing locales of this article")]
-        public async Task<MultipleTranslations> GetArticleTranslations([ActionParameter] ArticleIdentifier article)
+        public async Task<List<Translation>> GetArticleTranslations([ActionParameter] ArticleIdentifier article)
         {
             var client = new ZendeskClient(Creds);
             var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}/translations", Method.Get, Creds);
             var translations = client.GetPaginated<MultipleTranslations>(request).SelectMany(x => x.Translations);
-            return new MultipleTranslations { Translations = translations };
+            return translations.ToList();
         }
 
         [Action("Get article translation", Description = "Get the translation of an article for a specific locale")]
-        public async Task<SingleTranslation> GetArticleTranslation([ActionParameter] ArticleIdentifier articles, [ActionParameter] LocaleIdentifier locale)
+        public async Task<Translation> GetArticleTranslation([ActionParameter] ArticleIdentifier articles, [ActionParameter] LocaleIdentifier locale)
         {
             var client = new ZendeskClient(Creds);
             var request = new ZendeskRequest($"/api/v2/help_center/articles/{articles.Id}/translations/{locale.Locale}", Method.Get, Creds);
-            return await client.ExecuteWithHandling<SingleTranslation>(request);
+            var response = await client.ExecuteWithHandling<SingleTranslation>(request);
+            return response.Translation;
         }
 
         [Action("Get article missing translations", Description = "Get the locales that are missing for this article")]

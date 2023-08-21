@@ -16,9 +16,6 @@ namespace Apps.Zendesk.Connections
                 ConnectionUsage = ConnectionUsage.Actions,
                 ConnectionProperties = new List<ConnectionProperty>()
                 {
-                    //new ConnectionProperty("client_id"),
-                    //new ConnectionProperty("client_secret"),
-                    //new ConnectionProperty("redirect_uri"),
                     new ConnectionProperty("api_endpoint") {DisplayName = "Base URL"},
                 }
             },
