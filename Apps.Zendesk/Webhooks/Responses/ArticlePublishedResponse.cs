@@ -4,15 +4,15 @@ namespace Apps.Zendesk.Webhooks.Responses
 {
     public class ArticlePublishedResponse : ArticleResponse
     {
-        [Display("Author ID")]
+        [Display("Author")]
         public string AuthorId { get; set; }
 
-        [Display("Category ID")]
+        [Display("Category")]
         public string CategoryId { get; set; }
 
         public string Locale { get; set; }
 
-        [Display("Section ID")]
+        [Display("Section")]
         public string SectionId { get; set; }
         public string Title { get; set; }
     }

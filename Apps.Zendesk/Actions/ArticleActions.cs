@@ -107,7 +107,7 @@ namespace Apps.Zendesk.Actions
             await client.ExecuteWithHandling(request);
         }
 
-        [Action("Get all article locales", Description = "Get all existing locales of this article")]
+        [Action("Get all article translations", Description = "Get all existing translations of this article")]
         public async Task<List<Translation>> GetArticleTranslations([ActionParameter] ArticleIdentifier article)
         {
             var client = new ZendeskClient(Creds);
