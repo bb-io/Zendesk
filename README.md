@@ -87,3 +87,7 @@ Most content related actions exist. However, in the future we can add actions fo
 - In depth tickets
 
 Let us know if you're interested!
+
+## Feedback
+
+Feedback to our implementation of Zendesk is always very welcome. Reach out to us using the established channels or create an issue.
