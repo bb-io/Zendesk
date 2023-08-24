@@ -21,7 +21,7 @@ namespace Apps.Zendesk.DataSourceHandlers
 
         public Dictionary<string, string> GetData(DataSourceContext context)
         {
-            var client = new ZendeskClient(Creds);
+            var client = new ZendeskClient(InvocationContext);
             var request = new ZendeskRequest("/api/v2/guide/permission_groups", Method.Get, Creds);
             var groups = client.GetPaginated<MultiplePermissionGroups>(request).SelectMany(x => x.PermissionGroups);
 

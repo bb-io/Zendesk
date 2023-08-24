@@ -19,7 +19,7 @@ public class LocaleDataHandler : BaseInvocable, IDataSourceHandler
 
     public Dictionary<string, string> GetData(DataSourceContext context)
     {
-        var client = new ZendeskClient(Creds);
+        var client = new ZendeskClient(InvocationContext);
         var request = new ZendeskRequest($"/api/v2/help_center/locales", Method.Get, Creds);
         var response = client.Execute<EnabledLocales>(request);
 

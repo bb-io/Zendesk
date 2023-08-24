@@ -14,24 +14,25 @@ namespace Apps.Zendesk.Actions
         private IEnumerable<AuthenticationCredentialsProvider> Creds =>
             InvocationContext.AuthenticationCredentialsProviders;
 
+        private ZendeskClient Client { get; }
+
         public HelpCenterActions(InvocationContext invocationContext) : base(invocationContext)
         {
+            Client = new ZendeskClient(invocationContext);
         }
 
         [Action("Get helpcenter locales", Description = "Get all the activated helpcenter locales")]
         public EnabledLocales ListLocales()
         {
-            var client = new ZendeskClient(Creds);
             var request = new ZendeskRequest($"/api/v2/help_center/locales", Method.Get, Creds);
-            return client.Get<EnabledLocales>(request);
+            return Client.Get<EnabledLocales>(request);
         }
 
         [Action("Delete translation", Description = "Delete a specific translation")]
         public async Task DeleteTranslation([ActionParameter] TranslationIdentifier translation)
         {
-            var client = new ZendeskClient(Creds);
             var request = new ZendeskRequest($"/api/v2/help_center/translations/{translation.Id}", Method.Delete, Creds);
-            await client.ExecuteWithHandling(request);
+            await Client.ExecuteWithHandling(request);
         }
     }
 }

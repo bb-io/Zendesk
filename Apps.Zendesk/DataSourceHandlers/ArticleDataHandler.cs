@@ -18,7 +18,7 @@ public class ArticleDataHandler : BaseInvocable, IDataSourceHandler
 
     public Dictionary<string, string> GetData(DataSourceContext context)
     {
-        var client = new ZendeskClient(Creds);
+        var client = new ZendeskClient(InvocationContext);
         IEnumerable<Article> articles;
         if (string.IsNullOrEmpty(context.SearchString))
         {

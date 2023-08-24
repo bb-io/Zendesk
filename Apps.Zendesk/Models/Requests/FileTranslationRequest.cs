@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using File = Blackbird.Applications.Sdk.Common.Files.File;
 
 namespace Apps.Zendesk.Models.Requests
 {
@@ -19,7 +20,7 @@ namespace Apps.Zendesk.Models.Requests
         public string Locale { get; set; }
 
         [Display("HTML file")]
-        public byte[] File { get; set; }
+        public File File { get; set; }
 
         [Display("Is draft")]
         public bool? Draft { get; set; }
@@ -30,7 +31,7 @@ namespace Apps.Zendesk.Models.Requests
         public object Convert(bool isLocaleMissing)
         {
             var localeInRequest = isLocaleMissing ? Locale : null;
-            var fileString = Encoding.UTF8.GetString(File);
+            var fileString = Encoding.UTF8.GetString(File.Bytes);
             var doc = new HtmlDocument();
             doc.LoadHtml(fileString);
             var title = doc.DocumentNode.SelectSingleNode("html/head/title").InnerText;

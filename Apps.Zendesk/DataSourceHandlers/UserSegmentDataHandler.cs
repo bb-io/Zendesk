@@ -21,7 +21,7 @@ namespace Apps.Zendesk.DataSourceHandlers
 
         public Dictionary<string, string> GetData(DataSourceContext context)
         {
-            var client = new ZendeskClient(Creds);
+            var client = new ZendeskClient(InvocationContext);
             var request = new ZendeskRequest("/api/v2/help_center/user_segments/applicable", Method.Get, Creds);
             var segments = client.GetPaginated<MultipleUserSegments>(request).SelectMany(x => x.UserSegments);
 

@@ -2,6 +2,7 @@
 using Apps.Zendesk.Models.Responses;
 using Apps.Zendesk.Models.Responses.Error;
 using Blackbird.Applications.Sdk.Common.Authentication;
+using Blackbird.Applications.Sdk.Common.Invocation;
 using Newtonsoft.Json;
 using RestSharp;
 
@@ -9,10 +10,12 @@ namespace Apps.Zendesk
 {
     public class ZendeskClient : RestClient
     {
-        public ZendeskClient(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders) :
+        private InvocationContext Context { get; }
+        public ZendeskClient(InvocationContext invocationContext) :
             base(new RestClientOptions()
-                { ThrowOnAnyError = false, BaseUrl = GetUri(authenticationCredentialsProviders) })
+                { ThrowOnAnyError = false, BaseUrl = GetUri(invocationContext.AuthenticationCredentialsProviders) })
         {
+            Context = invocationContext;
         }
 
         private static Uri GetUri(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders)
@@ -42,7 +45,11 @@ namespace Apps.Zendesk
 
         public async Task<RestResponse> ExecuteWithHandling(RestRequest request)
         {
+            //Context.Logger.LogInformation("zendesk-request", new object[] { request });
+
             var response = await ExecuteAsync(request);
+
+            //Context.Logger.LogInformation("zendesk-response", new object[] { response });
 
             if (response.IsSuccessStatusCode)
                 return response;
@@ -68,6 +75,7 @@ namespace Apps.Zendesk
             }
             catch(Exception ex)
             {
+                //Context.Logger.LogError("zendesk-error", new object[] { ex });
                 error = responseContent;
             }
             throw new(error);

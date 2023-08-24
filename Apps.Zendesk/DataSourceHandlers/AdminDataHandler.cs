@@ -21,7 +21,7 @@ namespace Apps.Zendesk.DataSourceHandlers
 
         public Dictionary<string, string> GetData(DataSourceContext context)
         {
-            var client = new ZendeskClient(Creds);
+            var client = new ZendeskClient(InvocationContext);
             var request = new ZendeskRequest("/api/v2/users", Method.Get, Creds);
             request.AddQueryParameter("role", "admin");
             var users = client.GetPaginated<MultipleUsers>(request).SelectMany(x => x.Users);
