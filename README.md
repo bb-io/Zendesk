@@ -4,6 +4,8 @@ Blackbird is the new automation backbone for the language technology industry. B
 
 ## Introduction
 
+<!-- begin docs -->
+
 Zendesk is a customer service solution provider. Its feature set includes ticketing, chat, helpdesk articles and a Sales CRM. This Zendesk app primarily focusses on helpdesk articles and its localization features. It also includes actions for tickets.
 
 ## Before setting up
@@ -91,3 +93,5 @@ Let us know if you're interested!
 ## Feedback
 
 Feedback to our implementation of Zendesk is always very welcome. Reach out to us using the established channels or create an issue.
+
+<!-- end docs -->
