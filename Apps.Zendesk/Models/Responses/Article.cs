@@ -5,7 +5,7 @@ namespace Apps.Zendesk.Models.Responses
 {
     public class Article
     {
-        [Display("Article")]
+        [Display("Article ID")]
         [JsonProperty("id")]
         public string Id { get; set; }
 

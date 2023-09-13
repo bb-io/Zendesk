@@ -1,5 +1,4 @@
-﻿using Apps.Zendesk.Actions;
-using Apps.Zendesk.Models.Responses;
+﻿using Apps.Zendesk.Models.Responses;
 using Apps.Zendesk.Models.Responses.Wrappers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;

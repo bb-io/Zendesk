@@ -1,8 +1,6 @@
-﻿using Apps.Zendesk.Models.Responses;
-using Blackbird.Applications.Sdk.Common.Authentication;
+﻿using Blackbird.Applications.Sdk.Common.Authentication;
 using Newtonsoft.Json;
 using RestSharp;
-using System.Net.Mime;
 
 namespace Apps.Zendesk
 {

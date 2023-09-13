@@ -1,6 +1,5 @@
 ﻿using Blackbird.Applications.Sdk.Common;
 using Newtonsoft.Json;
-using System.Text.Json.Serialization;
 
 namespace Apps.Zendesk.Models.Responses;
 
