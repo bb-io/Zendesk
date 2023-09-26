@@ -1,7 +1,6 @@
-﻿namespace Apps.Zendesk.Models.Responses.Wrappers
+﻿namespace Apps.Zendesk.Models.Responses.Wrappers;
+
+public class SingleCategory
 {
-    public class SingleCategory
-    {
-        public Category Category { get; set; }
-    }
+    public Category Category { get; set; }
 }

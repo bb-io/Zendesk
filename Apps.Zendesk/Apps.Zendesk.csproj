@@ -7,18 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.1.0" />
-    <PackageReference Include="Blackbird.Applications.Sdk.Utils" Version="1.0.3" />
+    <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.2.0-alpha3" />
+    <PackageReference Include="Blackbird.Applications.Sdk.Utils" Version="1.0.11" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.46" />
     <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="2.2.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="RestSharp" Version="110.2.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="Blackbird.Applications.Sdk.Common">
-      <HintPath>..\..\..\Applications_SDK\Applications_SDK\Blackbird.Applications.Sdk.Common\bin\Debug\net6.0\Blackbird.Applications.Sdk.Common.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
   <ItemGroup>

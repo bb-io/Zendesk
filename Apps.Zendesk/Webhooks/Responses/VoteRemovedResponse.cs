@@ -1,10 +1,9 @@
 ﻿using Blackbird.Applications.Sdk.Common;
 
-namespace Apps.Zendesk.Webhooks.Responses
+namespace Apps.Zendesk.Webhooks.Responses;
+
+public class VoteRemovedResponse : ArticleResponse
 {
-    public class VoteRemovedResponse : ArticleResponse
-    {
-        [Display("Vote ID")]
-        public string Id { get; set; }
-    }
+    [Display("Vote ID")]
+    public string Id { get; set; }
 }

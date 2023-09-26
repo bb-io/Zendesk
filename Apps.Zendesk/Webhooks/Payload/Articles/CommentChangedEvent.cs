@@ -1,12 +1,11 @@
-﻿namespace Apps.Zendesk.Webhooks.Payload.Articles
-{
-    public class CommentChangedEvent
-    {
-        public CommentChanged Current { get; set; }
-    }
+﻿namespace Apps.Zendesk.Webhooks.Payload.Articles;
 
-    public class CommentChanged
-    {
-        public string Id { get; set; }
-    }
+public class CommentChangedEvent
+{
+    public CommentChanged Current { get; set; }
+}
+
+public class CommentChanged
+{
+    public string Id { get; set; }
 }

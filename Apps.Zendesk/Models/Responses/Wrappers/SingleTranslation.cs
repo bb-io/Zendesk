@@ -1,7 +1,6 @@
-﻿namespace Apps.Zendesk.Models.Responses.Wrappers
+﻿namespace Apps.Zendesk.Models.Responses.Wrappers;
+
+public class SingleTranslation
 {
-    public class SingleTranslation
-    {
-        public Translation Translation { get; set; }
-    }
+    public Translation Translation { get; set; }
 }

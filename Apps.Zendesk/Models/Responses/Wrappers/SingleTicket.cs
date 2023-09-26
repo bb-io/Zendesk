@@ -1,7 +1,6 @@
-﻿namespace Apps.Zendesk.Models.Responses.Wrappers
+﻿namespace Apps.Zendesk.Models.Responses.Wrappers;
+
+public class SingleTicket
 {
-    public class SingleTicket
-    {
-        public Ticket Ticket { get; set; }
-    }
+    public Ticket Ticket { get; set; }
 }

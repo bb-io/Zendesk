@@ -2,12 +2,11 @@
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 
-namespace Apps.Zendesk.Models.Identifiers
+namespace Apps.Zendesk.Models.Identifiers;
+
+public class OptionalMissingLocaleIdentifier
 {
-    public class OptionalMissingLocaleIdentifier
-    {
-        [DataSource(typeof(LocaleDataHandler))]
-        [Display("Missing translation in")]
-        public string? Locale { get; set; }
-    }
+    [DataSource(typeof(LocaleDataHandler))]
+    [Display("Missing translation in")]
+    public string? Locale { get; set; }
 }

@@ -1,8 +1,7 @@
-﻿namespace Apps.Zendesk.Webhooks.Payload
+﻿namespace Apps.Zendesk.Webhooks.Payload;
+
+public class SimpleBooleanEvent
 {
-    public class SimpleBooleanEvent
-    {
-        public bool Current { get; set; }
-        public bool Previous { get; set; }
-    }
+    public bool Current { get; set; }
+    public bool Previous { get; set; }
 }

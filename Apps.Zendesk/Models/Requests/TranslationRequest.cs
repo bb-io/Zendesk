@@ -3,45 +3,44 @@ using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Newtonsoft.Json;
 
-namespace Apps.Zendesk.Models.Requests
+namespace Apps.Zendesk.Models.Requests;
+
+public class TranslationRequest
 {
-    public class TranslationRequest
+    [DataSource(typeof(LocaleDataHandler))]
+    [Display("Locale")]
+    public string Locale { get; set; }
+
+    [Display("Title")]
+    [JsonProperty("title")]
+    public string? Title { get; set; }
+
+    [Display("Content")]
+    [JsonProperty("body")]
+    public string? Body { get; set; }
+
+    [Display("Is draft")]
+    [JsonProperty("draft")]
+    public bool? Draft { get; set; }
+
+    [Display("Is outdated")]
+    [JsonProperty("outdated")]
+    public bool? Outdated { get; set; }
+
+    public object Convert(bool isLocaleMissing)
     {
-        [DataSource(typeof(LocaleDataHandler))]
-        [Display("Locale")]
-        public string Locale { get; set; }
-
-        [Display("Title")]
-        [JsonProperty("title")]
-        public string? Title { get; set; }
-
-        [Display("Content")]
-        [JsonProperty("body")]
-        public string? Body { get; set; }
-
-        [Display("Is draft")]
-        [JsonProperty("draft")]
-        public bool? Draft { get; set; }
-
-        [Display("Is outdated")]
-        [JsonProperty("outdated")]
-        public bool? Outdated { get; set; }
-
-        public object Convert(bool isLocaleMissing)
+        var localeInRequest = isLocaleMissing ? Locale : null;
+        return new
         {
-            var localeInRequest = isLocaleMissing ? Locale : null;
-            return new
+            translation = new
             {
-                translation = new
-                {
-                    locale = localeInRequest,
-                    title = Title,
-                    body = Body,
-                    draft = Draft,
-                    outdated = Outdated
-                }
-            };
-        }
-
+                locale = localeInRequest,
+                title = Title,
+                body = Body,
+                draft = Draft,
+                outdated = Outdated
+            }
+        };
     }
+
 }

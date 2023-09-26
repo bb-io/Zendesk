@@ -1,7 +1,6 @@
-﻿namespace Apps.Zendesk.Models.Responses.Wrappers
+﻿namespace Apps.Zendesk.Models.Responses.Wrappers;
+
+public class MultipleUsers : PaginatedResponse
 {
-    public class MultipleUsers : PaginatedResponse
-    {
-        public IEnumerable<NamedResource> Users { get; set; }
-    }
+    public IEnumerable<NamedResource> Users { get; set; }
 }

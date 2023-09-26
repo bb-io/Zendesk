@@ -1,7 +1,6 @@
-﻿namespace Apps.Zendesk.Webhooks.Payload.Articles
+﻿namespace Apps.Zendesk.Webhooks.Payload.Articles;
+
+public class CommentUnpublishedEvent
 {
-    public class CommentUnpublishedEvent
-    {
-        public CommentPublished Comment { get; set; }
-    }
+    public CommentPublished Comment { get; set; }
 }

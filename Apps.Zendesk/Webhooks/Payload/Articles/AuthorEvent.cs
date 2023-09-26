@@ -1,7 +1,6 @@
-﻿namespace Apps.Zendesk.Webhooks.Payload.Articles
+﻿namespace Apps.Zendesk.Webhooks.Payload.Articles;
+
+public class AuthorEvent
 {
-    public class AuthorEvent
-    {
-        public string Current { get; set; }
-    }
+    public string Current { get; set; }
 }

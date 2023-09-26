@@ -2,12 +2,11 @@
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 
-namespace Apps.Zendesk.Webhooks.Responses
+namespace Apps.Zendesk.Webhooks.Responses;
+
+public class ArticleResponse
 {
-    public class ArticleResponse
-    {
-        [Display("Article")]
-        [DataSource(typeof(ArticleDataHandler))]
-        public string ArticleId { get; set; }
-    }
+    [Display("Article")]
+    [DataSource(typeof(ArticleDataHandler))]
+    public string ArticleId { get; set; }
 }

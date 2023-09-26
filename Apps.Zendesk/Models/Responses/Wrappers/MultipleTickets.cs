@@ -1,7 +1,6 @@
-﻿namespace Apps.Zendesk.Models.Responses.Wrappers
+﻿namespace Apps.Zendesk.Models.Responses.Wrappers;
+
+public class MultipleTickets : PaginatedResponse
 {
-    public class MultipleTickets : PaginatedResponse
-    {
-        public IEnumerable<Ticket> Tickets { get; set; }
-    }
+    public IEnumerable<Ticket> Tickets { get; set; }
 }

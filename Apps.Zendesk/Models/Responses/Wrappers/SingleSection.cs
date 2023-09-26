@@ -1,7 +1,6 @@
-﻿namespace Apps.Zendesk.Models.Responses.Wrappers
+﻿namespace Apps.Zendesk.Models.Responses.Wrappers;
+
+public class SingleSection
 {
-    public class SingleSection
-    {
-        public Section Section { get; set; }
-    }
+    public Section Section { get; set; }
 }

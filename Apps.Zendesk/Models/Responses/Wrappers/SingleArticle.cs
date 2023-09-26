@@ -1,7 +1,6 @@
-﻿namespace Apps.Zendesk.Models.Responses.Wrappers
+﻿namespace Apps.Zendesk.Models.Responses.Wrappers;
+
+public class SingleArticle
 {
-    public class SingleArticle
-    {
-        public Article Article { get; set; }
-    }
+    public Article Article { get; set; }
 }

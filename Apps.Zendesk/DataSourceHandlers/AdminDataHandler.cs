@@ -5,25 +5,24 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common;
 using RestSharp;
 
-namespace Apps.Zendesk.DataSourceHandlers
+namespace Apps.Zendesk.DataSourceHandlers;
+
+public class AdminDataHandler : BaseInvocable, IDataSourceHandler
 {
-    public class AdminDataHandler : BaseInvocable, IDataSourceHandler
+    private IEnumerable<AuthenticationCredentialsProvider> Creds =>
+        InvocationContext.AuthenticationCredentialsProviders;
+
+    public AdminDataHandler(InvocationContext invocationContext) : base(invocationContext) { }
+
+    public Dictionary<string, string> GetData(DataSourceContext context)
     {
-        private IEnumerable<AuthenticationCredentialsProvider> Creds =>
-            InvocationContext.AuthenticationCredentialsProviders;
+        var client = new ZendeskClient(InvocationContext);
+        var request = new ZendeskRequest("/api/v2/users", Method.Get, Creds);
+        request.AddQueryParameter("role", "admin");
+        var users = client.GetPaginated<MultipleUsers>(request).SelectMany(x => x.Users);
 
-        public AdminDataHandler(InvocationContext invocationContext) : base(invocationContext) { }
-
-        public Dictionary<string, string> GetData(DataSourceContext context)
-        {
-            var client = new ZendeskClient(InvocationContext);
-            var request = new ZendeskRequest("/api/v2/users", Method.Get, Creds);
-            request.AddQueryParameter("role", "admin");
-            var users = client.GetPaginated<MultipleUsers>(request).SelectMany(x => x.Users);
-
-            return users
-                .OrderBy(x => x.Name)
-                .ToDictionary(x => x.Id, x => x.Name);
-        }
+        return users
+            .OrderBy(x => x.Name)
+            .ToDictionary(x => x.Id, x => x.Name);
     }
 }

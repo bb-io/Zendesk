@@ -1,12 +1,11 @@
 ﻿using Blackbird.Applications.Sdk.Common;
 using Newtonsoft.Json;
 
-namespace Apps.Zendesk.Models.Identifiers
+namespace Apps.Zendesk.Models.Identifiers;
+
+public class TranslationIdentifier
 {
-    public class TranslationIdentifier
-    {
-        [Display("Translation")]
-        [JsonProperty("id")]
-        public string Id { get; set; }
-    }
+    [Display("Translation")]
+    [JsonProperty("id")]
+    public string Id { get; set; }
 }

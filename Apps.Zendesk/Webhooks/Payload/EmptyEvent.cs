@@ -1,6 +1,5 @@
-﻿namespace Apps.Zendesk.Webhooks.Payload
+﻿namespace Apps.Zendesk.Webhooks.Payload;
+
+public class EmptyEvent
 {
-    public class EmptyEvent
-    {
-    }
 }

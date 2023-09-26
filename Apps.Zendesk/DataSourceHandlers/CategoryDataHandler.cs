@@ -5,24 +5,23 @@ using Blackbird.Applications.Sdk.Common;
 using RestSharp;
 using Apps.Zendesk.Models.Responses.Wrappers;
 
-namespace Apps.Zendesk.DataSourceHandlers
+namespace Apps.Zendesk.DataSourceHandlers;
+
+public class CategoryDataHandler : BaseInvocable, IDataSourceHandler
 {
-    public class CategoryDataHandler : BaseInvocable, IDataSourceHandler
+    private IEnumerable<AuthenticationCredentialsProvider> Creds =>
+        InvocationContext.AuthenticationCredentialsProviders;
+
+    public CategoryDataHandler(InvocationContext invocationContext) : base(invocationContext) { }
+
+    public Dictionary<string, string> GetData(DataSourceContext context)
     {
-        private IEnumerable<AuthenticationCredentialsProvider> Creds =>
-            InvocationContext.AuthenticationCredentialsProviders;
+        var client = new ZendeskClient(InvocationContext);
+        var request = new ZendeskRequest("/api/v2/help_center/categories", Method.Get, Creds);
+        var categories = client.GetPaginated<MultipleCategories>(request).SelectMany(x => x.Categories);
 
-        public CategoryDataHandler(InvocationContext invocationContext) : base(invocationContext) { }
-
-        public Dictionary<string, string> GetData(DataSourceContext context)
-        {
-            var client = new ZendeskClient(InvocationContext);
-            var request = new ZendeskRequest("/api/v2/help_center/categories", Method.Get, Creds);
-            var categories = client.GetPaginated<MultipleCategories>(request).SelectMany(x => x.Categories);
-
-            return categories
-                .OrderByDescending(x => x.UpdatedAt)
-                .ToDictionary(x => x.Id.ToString(), x => x.Name);
-        }
+        return categories
+            .OrderByDescending(x => x.UpdatedAt)
+            .ToDictionary(x => x.Id.ToString(), x => x.Name);
     }
 }

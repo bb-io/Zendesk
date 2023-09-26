@@ -1,7 +1,6 @@
-﻿namespace Apps.Zendesk.Models.Responses.Wrappers
+﻿namespace Apps.Zendesk.Models.Responses.Wrappers;
+
+public class MultipleArticles : PaginatedResponse
 {
-    public class MultipleArticles : PaginatedResponse
-    {
-        public IEnumerable<Article> Articles { get; set; }
-    }
+    public IEnumerable<Article> Articles { get; set; }
 }

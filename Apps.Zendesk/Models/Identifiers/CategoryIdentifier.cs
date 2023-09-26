@@ -2,12 +2,11 @@
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 
-namespace Apps.Zendesk.Models.Identifiers
+namespace Apps.Zendesk.Models.Identifiers;
+
+public class CategoryIdentifier
 {
-    public class CategoryIdentifier
-    {
-        [Display("Category")]
-        [DataSource(typeof(CategoryDataHandler))]
-        public string Id { get; set; }
-    }
+    [Display("Category")]
+    [DataSource(typeof(CategoryDataHandler))]
+    public string Id { get; set; }
 }
