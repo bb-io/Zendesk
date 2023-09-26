@@ -28,9 +28,12 @@ namespace Apps.Zendesk.Models.Requests
             var fileString = Encoding.UTF8.GetString(File.Bytes);
             var doc = new HtmlDocument();
             doc.LoadHtml(fileString);
-            var title = doc.DocumentNode.SelectSingleNode("html/head/title").InnerText;
-            var body = doc.DocumentNode.SelectSingleNode("/html/body").InnerHtml;
+            var title = doc.DocumentNode.SelectSingleNode("html/head/title")?.InnerText;
+            var body = doc.DocumentNode.SelectSingleNode("/html/body")?.InnerHtml;
 
+            if (title is null || body is null)
+                throw new("Translation HTML file is in a wrong format, please check if it is not corrupted");
+            
             return new
             {
                 translation = new
