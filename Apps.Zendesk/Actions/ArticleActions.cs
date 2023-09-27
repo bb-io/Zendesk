@@ -10,6 +10,7 @@ using Apps.Zendesk.Models.Identifiers;
 using Apps.Zendesk.Models.Responses.Wrappers;
 using File = Blackbird.Applications.Sdk.Common.Files.File;
 using System.Net.Mime;
+using System.Text.RegularExpressions;
 
 namespace Apps.Zendesk.Actions;
 
@@ -163,11 +164,16 @@ public class ArticleActions : BaseInvocable
         string htmlFile =
             $"<html><head><title>{response.Article.Title}</title></head><body>{response.Article.Body}</body></html>";
 
+        var invalidChars = new List<char>();
+        invalidChars.AddRange(Path.GetInvalidFileNameChars());
+        invalidChars.AddRange(new char[] { '?', '"', '<', '>', '/', '\\', ':', '|', '*' });
+        var removeInvalidChars = new Regex($"[{Regex.Escape(new string(invalidChars.ToArray()))}]", RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        var filename = removeInvalidChars.Replace(response.Article.Name, "");
         return new FileResponse
         {
             File = new File(Encoding.UTF8.GetBytes(htmlFile))
             {
-                Name = $"{response.Article.Name}.html",
+                Name = $"{filename}.html",
                 ContentType = MediaTypeNames.Text.Html
             }
         };
