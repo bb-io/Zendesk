@@ -69,7 +69,7 @@ Furthermore, we have created a useful set of actions in order to treat Zendesk a
 
 ## Events
 
-- **On article published** is the most useful event. This event is triggered when any article is published and could be the perfect trigger for sending the article for translation based on the missing translations (see example).
+- **On article published** is the most useful event. This event is triggered when any article is published and could be the perfect trigger for sending the article for translation based on the missing translations (see example). It has an optional parameter _Only source articles_ which, if true, will only trigger the bird if the source locale of the article is published. This is helpful to not create infinite publish loops of translations.
 - **Other** events for article comments, subscriptions, votes and user events.
 
 ## Example

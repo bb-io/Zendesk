@@ -1,16 +1,33 @@
-﻿using Apps.Zendesk.Webhooks.Handlers.ArticleHandlers;
+﻿using Apps.Zendesk.Models.Responses.Wrappers;
+using Apps.Zendesk.Models.Responses;
+using Apps.Zendesk.Webhooks.Handlers.ArticleHandlers;
 using Apps.Zendesk.Webhooks.Handlers.UserHandlers;
+using Apps.Zendesk.Webhooks.Input;
 using Apps.Zendesk.Webhooks.Payload;
 using Apps.Zendesk.Webhooks.Payload.Articles;
 using Apps.Zendesk.Webhooks.Responses;
+using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.Sdk.Common.Authentication;
+using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
 using Newtonsoft.Json;
+using RestSharp;
 
 namespace Apps.Zendesk.Webhooks;
 
 [WebhookList]
-public class WebhookList 
+public class WebhookList : BaseInvocable
 {
+    private IEnumerable<AuthenticationCredentialsProvider> Creds =>
+        InvocationContext.AuthenticationCredentialsProviders;
+
+    private ZendeskClient Client { get; }
+
+    public WebhookList(InvocationContext invocationContext) : base(invocationContext)
+    {
+        Client = new ZendeskClient(invocationContext);
+    }
+
     [Webhook("On user alias changed", typeof(UserAliasChangedHandler), Description = "On user alias changed")]
     public async Task<WebhookResponse<UserPayloadTemplate<SimpleStringEvent>>> UserAliasChangedHandler(WebhookRequest webhookRequest)
     {
@@ -352,10 +369,30 @@ public class WebhookList
     }
 
     [Webhook("On article published", typeof(ArticlePublishedHandler), Description = "On article published")]
-    public async Task<WebhookResponse<ArticlePublishedResponse>> ArticlePublishedHandler(WebhookRequest webhookRequest)
+    public async Task<WebhookResponse<ArticlePublishedResponse>> ArticlePublishedHandler(WebhookRequest webhookRequest, [WebhookParameter] ArticlePublishedInputParameter input)
     {
         var data = JsonConvert.DeserializeObject<ArticlePayloadTemplate<PublishEvent>>(webhookRequest.Body.ToString());
         if (data is null) { throw new InvalidCastException(nameof(webhookRequest.Body)); }
+
+        if (input.OnlyIfSource != null && input.OnlyIfSource.Value)
+        {
+            var locale = data.Event.Locale;
+            var id = data.Detail.Id;
+            var request = new ZendeskRequest($"/api/v2/help_center/articles/{id}", Method.Get, Creds);
+            var response = await Client.ExecuteWithHandling<SingleArticle>(request);
+
+            if (response.Article.SourceLocale != locale)
+            {
+                return new WebhookResponse<ArticlePublishedResponse>
+                {
+                    HttpResponseMessage = null,
+                    ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                    Result = null
+                };
+            }
+
+        }
+
         return new WebhookResponse<ArticlePublishedResponse>
         {
             HttpResponseMessage = null,
