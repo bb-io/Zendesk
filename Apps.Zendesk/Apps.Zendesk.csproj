@@ -4,6 +4,10 @@
     <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Product>Zendesk</Product>
+    <Version>1.0.0</Version>
+    <Description>Zendesk makes customer service better</Description>
+    <AssemblyName>Apps.Zendesk</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,6 +19,10 @@
 
   <ItemGroup>
     <Folder Include="Webhooks\Handlers\UserHandlers\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource CopyToOutputDirectory="Always" Include="image\icon.png"></EmbeddedResource>
   </ItemGroup>
 
 </Project>
