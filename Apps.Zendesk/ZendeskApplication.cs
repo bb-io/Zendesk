@@ -1,16 +1,16 @@
 ﻿using Apps.Zendesk.Auth.OAuth2;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
-
+using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.Zendesk;
 
-public class ZendeskApplication : IApplication
+public class ZendeskApplication : BaseInvocable, IApplication
 {
     private string _name;
     private readonly Dictionary<Type, object> _typesInstances;
 
-    public ZendeskApplication()
+    public ZendeskApplication(InvocationContext invocationContext) : base(invocationContext)
     {
         _name = "Zendesk";
         _typesInstances = CreateTypesInstances();
@@ -35,8 +35,8 @@ public class ZendeskApplication : IApplication
     {
         return new Dictionary<Type, object>
         {
-            { typeof(IOAuth2AuthorizeService), new OAuth2AuthorizeService() },
-            { typeof(IOAuth2TokenService), new OAuth2TokenService() }
+            { typeof(IOAuth2AuthorizeService), new OAuth2AuthorizeService(InvocationContext) },
+            { typeof(IOAuth2TokenService), new OAuth2TokenService(InvocationContext) }
         };
     }
 }
