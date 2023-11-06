@@ -1,28 +1,23 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Product>Zendesk</Product>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Description>Zendesk makes customer service better</Description>
     <AssemblyName>Apps.Zendesk</AssemblyName>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.2.0-alpha4" />
     <PackageReference Include="Blackbird.Applications.Sdk.Utils" Version="1.0.11" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.46" />
     <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="2.2.0" />
   </ItemGroup>
-
   <ItemGroup>
     <Folder Include="Webhooks\Handlers\UserHandlers\" />
   </ItemGroup>
-
   <ItemGroup>
     <EmbeddedResource CopyToOutputDirectory="Always" Include="image\icon.png"></EmbeddedResource>
   </ItemGroup>
-
 </Project>
