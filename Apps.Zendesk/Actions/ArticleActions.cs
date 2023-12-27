@@ -8,22 +8,26 @@ using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Apps.Zendesk.Models.Identifiers;
 using Apps.Zendesk.Models.Responses.Wrappers;
-using File = Blackbird.Applications.Sdk.Common.Files.File;
 using System.Net.Mime;
 using System.Text.RegularExpressions;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 
 namespace Apps.Zendesk.Actions;
 
 [ActionList]
 public class ArticleActions : BaseInvocable
 {
+    private readonly IFileManagementClient _fileManagementClient;
+    
     private IEnumerable<AuthenticationCredentialsProvider> Creds =>
         InvocationContext.AuthenticationCredentialsProviders;
 
     private ZendeskClient Client { get; }
 
-    public ArticleActions(InvocationContext invocationContext) : base(invocationContext)
+    public ArticleActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) 
+        : base(invocationContext)
     {
+        _fileManagementClient = fileManagementClient;
         Client = new ZendeskClient(invocationContext);
     }
 
@@ -169,14 +173,10 @@ public class ArticleActions : BaseInvocable
         invalidChars.AddRange(new char[] { '?', '"', '<', '>', '/', '\\', ':', '|', '*' });
         var removeInvalidChars = new Regex($"[{Regex.Escape(new string(invalidChars.ToArray()))}]", RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant);
         var filename = removeInvalidChars.Replace(response.Article.Name, "");
-        return new FileResponse
-        {
-            File = new File(Encoding.UTF8.GetBytes(htmlFile))
-            {
-                Name = $"{filename}.html",
-                ContentType = MediaTypeNames.Text.Html
-            }
-        };
+
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(htmlFile));
+        var file = await _fileManagementClient.UploadAsync(stream, MediaTypeNames.Text.Html, $"{filename}.html");
+        return new FileResponse { File = file };
     }
 
     [Action("Update article translation from HTML file",
@@ -190,7 +190,7 @@ public class ArticleActions : BaseInvocable
         var request =
             ZendeskRequest.CreateTranslationUpsertRequest(isLocaleMissing, $"articles/{article.Id}", input.Locale,
                 Creds);
-        request.AddNewtonJson(input.Convert(isLocaleMissing));
+        request.AddNewtonJson(input.Convert(isLocaleMissing, _fileManagementClient));
         var response = await Client.ExecuteWithHandling<SingleTranslation>(request);
         return response.Translation;
     }
