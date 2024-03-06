@@ -145,7 +145,7 @@ public class ArticleActions : BaseInvocable
     }
 
     [Action("Add image to article", Description = "Add an image to the bottom of the article")]
-    public async Task<Translation> UpdateArticle([ActionParameter] ArticleIdentifier article, [ActionParameter] LocaleIdentifier locale, 
+    public async Task<Translation> AddImageToArticle([ActionParameter] ArticleIdentifier article, [ActionParameter] LocaleIdentifier locale, 
             [ActionParameter] ImageRequest input)
     {
         var articleResponse = await GetArticleTranslation(article, locale);
