@@ -11,6 +11,7 @@ using Apps.Zendesk.Models.Responses.Wrappers;
 using System.Net.Mime;
 using System.Text.RegularExpressions;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Blackbird.Applications.Sdk.Utils.Extensions.Files;
 
 namespace Apps.Zendesk.Actions;
 
@@ -99,7 +100,7 @@ public class ArticleActions : BaseInvocable
         return response.Article;
     }
 
-    [Action("Update article", Description = "Update an article")]
+    [Action("Update article", Description = "Update an article. This action does not update translation properties such as the article's title, body, locale, or draft. Use 'Update article translation'")]
     public async Task<Article> UpdateArticle([ActionParameter] ArticleIdentifier article,
         [ActionParameter] UpdateArticleRequest input)
     {
@@ -141,6 +142,26 @@ public class ArticleActions : BaseInvocable
         var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}/translations/missing",
             Method.Get, Creds);
         return await Client.ExecuteWithHandling<MissingLocales>(request);
+    }
+
+    [Action("Add image to article", Description = "Add an image to the bottom of the article")]
+    public async Task<Translation> UpdateArticle([ActionParameter] ArticleIdentifier article, [ActionParameter] LocaleIdentifier locale, 
+            [ActionParameter] ImageRequest input)
+    {
+        var articleResponse = await GetArticleTranslation(article, locale);
+
+        using var fileStream = await _fileManagementClient.DownloadAsync(input.File);
+        var fileAttachment = await fileStream.GetByteData();
+
+        var uploadRequest = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}/attachments", Method.Post, Creds);
+        uploadRequest.AddFile("file", fileAttachment, input.File.Name);
+        uploadRequest.AddParameter("inline", "true");
+
+        var attachmentResponse = await Client.ExecuteWithHandling<AttachmentUploadResponse>(uploadRequest);
+
+        var newHtml = $"{articleResponse.Body}<p><img src=\"{attachmentResponse.Attachment.ContentUrl}\" alt=\"{attachmentResponse.Attachment.DisplayFileName}\"></p>";
+
+        return await TranslateArticle(article, new TranslationRequest { Locale = locale.Locale, Body = newHtml });
     }
 
     [Action("Update article translation",

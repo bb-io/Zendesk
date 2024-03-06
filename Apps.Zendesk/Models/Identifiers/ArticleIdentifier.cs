@@ -6,7 +6,7 @@ namespace Apps.Zendesk.Models.Identifiers;
 
 public class ArticleIdentifier
 {
-    [Display("Article")]
+    [Display("Article ID")]
     [DataSource(typeof(ArticleDataHandler))]
     public string Id { get; set; }
 }
