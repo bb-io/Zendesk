@@ -23,14 +23,21 @@ namespace Apps.Zendesk.DataSourceHandlers
 
         public Dictionary<string, string> GetData(DataSourceContext context)
         {
-            var client = new ZendeskClient(InvocationContext);
-            var request = new ZendeskRequest($"/api/v2/help_center/articles/labels", Method.Get, Creds);
-            var response = client.Execute<LabelResponse>(request);
+            try
+            {
+                var client = new ZendeskClient(InvocationContext);
+                var request = new ZendeskRequest($"/api/v2/help_center/articles/labels", Method.Get, Creds);
+                var response = client.Execute<LabelResponse>(request);
 
-            return response.Labels
-                .Where(x => context.SearchString == null ||
-                            x.Name.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
-                .ToDictionary(x => x.Id.ToString(), x => x.Name);
+                return response.Labels
+                    .Where(x => context.SearchString == null ||
+                                x.Name.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
+                    .ToDictionary(x => x.Id.ToString(), x => x.Name);
+            } catch (Exception ex)
+            {
+                throw new Exception("Article labels are only available on the Professional and Enterprise plans.");
+            }
+
         }
     }
 }
