@@ -12,6 +12,8 @@ using System.Net.Mime;
 using System.Text.RegularExpressions;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Utils.Extensions.Files;
+using Blackbird.Applications.Sdk.Common.Dynamic;
+using Apps.Zendesk.DataSourceHandlers;
 
 namespace Apps.Zendesk.Actions;
 
@@ -77,11 +79,20 @@ public class ArticleActions : BaseInvocable
     }
 
     [Action("Get article", Description = "Get information on a specific article")]
-    public async Task<Article> GetArticle([ActionParameter] ArticleIdentifier article)
+    public async Task<ArticleWithLabels> GetArticle([ActionParameter] ArticleIdentifier article)
     {
         var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}", Method.Get, Creds);
         var response = await Client.ExecuteWithHandling<SingleArticle>(request);
-        return response.Article;
+        var labels = new List<string>();
+
+        try
+        {
+            var labelRequest = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}/labels", Method.Get, Creds);
+            var labelResponse = await Client.ExecuteWithHandling<LabelResponse>(labelRequest);
+            labels = labelResponse.Labels.Select(x => x.Name).ToList();
+        }
+        catch { }
+        return new(response.Article, labels);
     }
 
 
@@ -127,13 +138,24 @@ public class ArticleActions : BaseInvocable
     }
 
     [Action("Get article translation", Description = "Get the translation of an article for a specific locale")]
-    public async Task<Translation> GetArticleTranslation([ActionParameter] ArticleIdentifier articles,
+    public async Task<TranslationWithLabels> GetArticleTranslation([ActionParameter] ArticleIdentifier article,
         [ActionParameter] LocaleIdentifier locale)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/articles/{articles.Id}/translations/{locale.Locale}",
+        var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}/translations/{locale.Locale}",
             Method.Get, Creds);
         var response = await Client.ExecuteWithHandling<SingleTranslation>(request);
-        return response.Translation;
+
+        var labels = new List<string>();
+
+        try
+        {
+            var labelRequest = new ZendeskRequest($"/api/v2/help_center/{locale.Locale}/articles/{article.Id}/labels", Method.Get, Creds);
+            var labelResponse = await Client.ExecuteWithHandling<LabelResponse>(labelRequest);
+            labels = labelResponse.Labels.Select(x => x.Name).ToList();
+        }
+        catch { }
+
+        return new(response.Translation, labels);
     }
 
     [Action("Get article missing translations", Description = "Get the locales that are missing for this article")]
@@ -214,5 +236,20 @@ public class ArticleActions : BaseInvocable
         request.AddNewtonJson(input.Convert(isLocaleMissing, _fileManagementClient));
         var response = await Client.ExecuteWithHandling<SingleTranslation>(request);
         return response.Translation;
+    }
+
+    [Action("Add label to article", Description = "Add a new label to an article")]
+    public async Task AddArticleLabel([ActionParameter] ArticleIdentifier article, [ActionParameter] LocaleIdentifier locale, [ActionParameter][Display("Name")] string name)
+    {
+        var request = new ZendeskRequest($"/api/v2/help_center/{locale.Locale}/articles/{article.Id}/labels", Method.Post, Creds);
+        request.AddJsonBody(new { label = new { name = name } });
+        await Client.ExecuteWithHandling(request);
+    }
+
+    [Action("Delete label from article", Description = "Delete a label from an article")]
+    public async Task DeleteArticleLabel([ActionParameter] ArticleIdentifier article, [ActionParameter] LocaleIdentifier locale, [ActionParameter][Display("Label")][DataSource(typeof(LabelDataHandler))] string labelId)
+    {
+        var request = new ZendeskRequest($"/api/v2/help_center/{locale.Locale}/articles/{article.Id}/labels/{labelId}", Method.Delete, Creds);
+        await Client.ExecuteWithHandling(request);
     }
 }

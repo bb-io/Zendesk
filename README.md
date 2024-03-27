@@ -40,6 +40,10 @@ Before you can connect you need to make sure that:
 - **Create/update/archive article**.
 - **Get article missing translations** returns a list of locales that have been configured in Zendesk but are not present for this article. It can be used to create the missing translations.
 - **Update article translation** creates a translation if there is none, or updates the translation if it already exists.
+- **Get article** returns all article information. If you are on a professional or enterprise plan it will also return its labels.
+- **Get article translation** returns an article translation's information. If you are on a professional or enterprise plan it will also return its labels.
+- **Add label to article** on a professional or enterprise plan, it adds a label to an article.
+- **Delete label from article** on a professional or enterprise plan, it deletes a label from an article.
 
 Furthermore, we have created a useful set of actions in order to treat Zendesk articles as HTML files. This allows you to create workflows translating Zendesk articles without individually sending the title and content strings for translation.
 
