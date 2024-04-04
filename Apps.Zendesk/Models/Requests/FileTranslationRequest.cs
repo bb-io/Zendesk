@@ -6,6 +6,7 @@ using System.Text;
 using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Utils.Extensions.Files;
+using System.Web;
 
 namespace Apps.Zendesk.Models.Requests;
 
@@ -31,7 +32,7 @@ public class FileTranslationRequest
         var localeInRequest = isLocaleMissing ? Locale : null;
         var doc = new HtmlDocument();
         doc.LoadHtml(fileString);
-        var title = doc.DocumentNode.SelectSingleNode("html/head/title")?.InnerText;
+        var title = HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode("html/head/title")?.InnerText);
         var body = doc.DocumentNode.SelectSingleNode("/html/body")?.InnerHtml;
 
         if (title is null || body is null)
