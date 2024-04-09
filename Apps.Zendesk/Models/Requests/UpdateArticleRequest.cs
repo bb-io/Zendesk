@@ -7,7 +7,6 @@ namespace Apps.Zendesk.Models.Requests;
 
 public class UpdateArticleRequest
 {
-    // Todo: content tags, label names
 
     [Display("Permission group")]
     [DataSource(typeof(PermissionGroupDataHandler))]

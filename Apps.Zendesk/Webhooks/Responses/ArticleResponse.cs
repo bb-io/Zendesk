@@ -6,7 +6,7 @@ namespace Apps.Zendesk.Webhooks.Responses;
 
 public class ArticleResponse
 {
-    [Display("Article")]
+    [Display("Article ID")]
     [DataSource(typeof(ArticleDataHandler))]
     public string ArticleId { get; set; }
 }
