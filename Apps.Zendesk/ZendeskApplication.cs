@@ -2,14 +2,21 @@
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Applications.Sdk.Common.Metadata;
 
 namespace Apps.Zendesk;
 
-public class ZendeskApplication : BaseInvocable, IApplication
+public class ZendeskApplication : BaseInvocable, IApplication, ICategoryProvider
 {
     private string _name;
     private readonly Dictionary<Type, object> _typesInstances;
 
+    public IEnumerable<ApplicationCategory> Categories
+    {
+        get => [ApplicationCategory.Cms, ApplicationCategory.CustomerSupport];
+        set { }
+    }
+    
     public ZendeskApplication(InvocationContext invocationContext) : base(invocationContext)
     {
         _name = "Zendesk";
