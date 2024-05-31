@@ -209,7 +209,7 @@ public class ArticleActions : BaseInvocable
         var response = await Client.ExecuteWithHandling<SingleArticle>(request);
 
         string htmlFile =
-            $"<html><head><title>{response.Article.Title}</title></head><body>{response.Article.Body}</body></html>";
+            $"<html><head><title>{response.Article.Title}</title><meta name=\"blackbird-reference-id\" content=\"{article.Id}\"></head><body>{response.Article.Body}</body></html>";
 
         var invalidChars = new List<char>();
         invalidChars.AddRange(Path.GetInvalidFileNameChars());
@@ -228,12 +228,18 @@ public class ArticleActions : BaseInvocable
     public async Task<Translation> TranslateArticleFromFile([ActionParameter] ArticleIdentifier article,
         [ActionParameter] FileTranslationRequest input)
     {
-        var missingLocales = await GetArticleMissingTranslations(article);
+        var fileBytes = await (await _fileManagementClient.DownloadAsync(input.File)).GetByteData();
+        var referenceId = FileTranslationRequest.ExtractBlackbirdId(fileBytes);
+        
+        var articleRequest = new ArticleIdentifier { Id = referenceId ?? article.Id ?? throw new Exception("Blackbird reference ID not found in the HTML file and no article ID provided") };
+        var missingLocales = await GetArticleMissingTranslations(articleRequest);
         var isLocaleMissing = missingLocales.Locales.Contains(input.Locale);
+        var converted = input.Convert(fileBytes, isLocaleMissing);
+
         var request =
             ZendeskRequest.CreateTranslationUpsertRequest(isLocaleMissing, $"articles/{article.Id}", input.Locale,
                 Creds);
-        request.AddNewtonJson(input.Convert(isLocaleMissing, _fileManagementClient));
+        request.AddNewtonJson(converted);
         var response = await Client.ExecuteWithHandling<SingleTranslation>(request);
         return response.Translation;
     }
