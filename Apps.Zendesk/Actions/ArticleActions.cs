@@ -209,7 +209,7 @@ public class ArticleActions : BaseInvocable
         var response = await Client.ExecuteWithHandling<SingleArticle>(request);
 
         string htmlFile =
-            $"<html><head><title>{response.Article.Title}</title></head><body>{response.Article.Body}</body></html>";
+            $"<html><head><title>{response.Article.Title}</title><meta name=\"{Constants.Constants.BlackbirdReferenceId}\" content=\"{article.Id}\"></head><body>{response.Article.Body}</body></html>";
 
         var invalidChars = new List<char>();
         invalidChars.AddRange(Path.GetInvalidFileNameChars());
@@ -225,15 +225,22 @@ public class ArticleActions : BaseInvocable
     [Action("Update article translation from HTML file",
         Description =
             "Updates the translation for an article, creates a new translation if there is none. Takes a translated HTML file as input")]
-    public async Task<Translation> TranslateArticleFromFile([ActionParameter] ArticleIdentifier article,
+    public async Task<Translation> TranslateArticleFromFile([ActionParameter] ArticleOptimalIdentifier article,
         [ActionParameter] FileTranslationRequest input)
     {
-        var missingLocales = await GetArticleMissingTranslations(article);
+        var fileReference = await _fileManagementClient.DownloadAsync(input.File);
+        var fileBytes = await fileReference.GetByteData();
+        var referenceId = FileTranslationRequest.ExtractBlackbirdId(fileBytes);
+        
+        var articleRequest = new ArticleIdentifier { Id = referenceId ?? article.Id ?? throw new Exception("Blackbird reference ID not found in the HTML file and no article ID provided") };
+        var missingLocales = await GetArticleMissingTranslations(articleRequest);
         var isLocaleMissing = missingLocales.Locales.Contains(input.Locale);
+        var converted = input.Convert(fileBytes, isLocaleMissing);
+
         var request =
             ZendeskRequest.CreateTranslationUpsertRequest(isLocaleMissing, $"articles/{article.Id}", input.Locale,
                 Creds);
-        request.AddNewtonJson(input.Convert(isLocaleMissing, _fileManagementClient));
+        request.AddNewtonJson(converted);
         var response = await Client.ExecuteWithHandling<SingleTranslation>(request);
         return response.Translation;
     }

@@ -25,18 +25,28 @@ public class FileTranslationRequest
     [Display("Is outdated")]
     public bool? Outdated { get; set; }
 
-    public object Convert(bool isLocaleMissing, IFileManagementClient fileManagementClient)
+    public static string? ExtractBlackbirdId(byte[] fileBytes)
     {
-        var fileBytes = fileManagementClient.DownloadAsync(File).Result.GetByteData().Result;
+        var fileString = Encoding.UTF8.GetString(fileBytes);
+        var doc = new HtmlDocument();
+        doc.LoadHtml(fileString);
+        var referenceId = doc.DocumentNode.SelectSingleNode($"//meta[@name='{Constants.Constants.BlackbirdReferenceId}']")?.GetAttributeValue("content", null) ?? null;
+
+        return referenceId;
+    }
+
+    public object Convert(byte[] fileBytes, bool isLocaleMissing)
+    {
         var fileString = Encoding.UTF8.GetString(fileBytes);
         var localeInRequest = isLocaleMissing ? Locale : null;
         var doc = new HtmlDocument();
         doc.LoadHtml(fileString);
+
         var title = HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode("html/head/title")?.InnerText);
         var body = doc.DocumentNode.SelectSingleNode("/html/body")?.InnerHtml;
 
         if (title is null || body is null)
-            throw new("Translation HTML file is in a wrong format, please check if it is not corrupted");
+            throw new Exception("Translation HTML file is in a wrong format, please check if it is not corrupted");
             
         return new
         {
