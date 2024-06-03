@@ -230,15 +230,16 @@ public class ArticleActions : BaseInvocable
     {
         var fileReference = await _fileManagementClient.DownloadAsync(input.File);
         var fileBytes = await fileReference.GetByteData();
-        var referenceId = FileTranslationRequest.ExtractBlackbirdId(fileBytes);
         
-        var articleRequest = new ArticleIdentifier { Id = referenceId ?? article.Id ?? throw new Exception("Blackbird reference ID not found in the HTML file and no article ID provided") };
+        var articleId = article.Id ?? FileTranslationRequest.ExtractBlackbirdId(fileBytes) ?? throw new Exception("Blackbird reference ID not found in the HTML file and no article ID provided");
+        var articleRequest = new ArticleIdentifier { Id = articleId };
+        
         var missingLocales = await GetArticleMissingTranslations(articleRequest);
         var isLocaleMissing = missingLocales.Locales.Contains(input.Locale);
         var converted = input.Convert(fileBytes, isLocaleMissing);
 
         var request =
-            ZendeskRequest.CreateTranslationUpsertRequest(isLocaleMissing, $"articles/{article.Id}", input.Locale,
+            ZendeskRequest.CreateTranslationUpsertRequest(isLocaleMissing, $"articles/{articleId}", input.Locale,
                 Creds);
         request.AddNewtonJson(converted);
         var response = await Client.ExecuteWithHandling<SingleTranslation>(request);
