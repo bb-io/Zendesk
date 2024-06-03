@@ -47,8 +47,8 @@ Before you can connect you need to make sure that:
 
 Furthermore, we have created a useful set of actions in order to treat Zendesk articles as HTML files. This allows you to create workflows translating Zendesk articles without individually sending the title and content strings for translation.
 
-- **Get article as HTML file** returns an HTML file with the header title as the article title and the article ID included in the head as a meta tag. The body is populated with the article content. This can be used to send the article for translation.
-- **Update article translation from HTML file** file expects an HTML file with a similar structure as the previous action. It behaves the same as Update article translation. As the article ID is included in the head of the HTML file, it will update the correct article, but you can specify the article ID in the action as well.
+- **Get article as HTML file** returns an HTML file with the header title as the article title and the `Article ID` included in the head as a `meta` tag. The body is populated with the article content. This can be used to send the article for translation.
+- **Update article translation from HTML file** file expects an HTML file with a similar structure as the previous action. It behaves the same as Update article translation. As the article ID is included in the head of the HTML file, it will update the correct article, but you can specify the `Article ID` in the action as well.
 
 ![HTML articles](image/README/1692613846802.png)
 
