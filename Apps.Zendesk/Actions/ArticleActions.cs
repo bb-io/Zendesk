@@ -209,7 +209,7 @@ public class ArticleActions : BaseInvocable
         var response = await Client.ExecuteWithHandling<SingleArticle>(request);
 
         string htmlFile =
-            $"<html><head><title>{response.Article.Title}</title><meta name=\"blackbird-reference-id\" content=\"{article.Id}\"></head><body>{response.Article.Body}</body></html>";
+            $"<html><head><title>{response.Article.Title}</title><meta name=\"{Constants.Constants.BlackbirdReferenceId}\" content=\"{article.Id}\"></head><body>{response.Article.Body}</body></html>";
 
         var invalidChars = new List<char>();
         invalidChars.AddRange(Path.GetInvalidFileNameChars());
@@ -225,10 +225,11 @@ public class ArticleActions : BaseInvocable
     [Action("Update article translation from HTML file",
         Description =
             "Updates the translation for an article, creates a new translation if there is none. Takes a translated HTML file as input")]
-    public async Task<Translation> TranslateArticleFromFile([ActionParameter] ArticleIdentifier article,
+    public async Task<Translation> TranslateArticleFromFile([ActionParameter] ArticleOptimalIdentifier article,
         [ActionParameter] FileTranslationRequest input)
     {
-        var fileBytes = await (await _fileManagementClient.DownloadAsync(input.File)).GetByteData();
+        var fileReference = await _fileManagementClient.DownloadAsync(input.File);
+        var fileBytes = await fileReference.GetByteData();
         var referenceId = FileTranslationRequest.ExtractBlackbirdId(fileBytes);
         
         var articleRequest = new ArticleIdentifier { Id = referenceId ?? article.Id ?? throw new Exception("Blackbird reference ID not found in the HTML file and no article ID provided") };

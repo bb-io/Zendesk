@@ -1,0 +1,12 @@
+﻿using Apps.Zendesk.DataSourceHandlers;
+using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.Sdk.Common.Dynamic;
+
+namespace Apps.Zendesk.Models.Identifiers;
+
+public class ArticleOptimalIdentifier
+{
+    [Display("Article ID")]
+    [DataSource(typeof(ArticleDataHandler))]
+    public string? Id { get; set; }
+}

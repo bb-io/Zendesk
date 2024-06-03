@@ -25,15 +25,12 @@ public class FileTranslationRequest
     [Display("Is outdated")]
     public bool? Outdated { get; set; }
 
-    public static string ExtractBlackbirdId(byte[] fileBytes)
+    public static string? ExtractBlackbirdId(byte[] fileBytes)
     {
         var fileString = Encoding.UTF8.GetString(fileBytes);
         var doc = new HtmlDocument();
         doc.LoadHtml(fileString);
-        var referenceId = doc.DocumentNode.SelectSingleNode("//meta[@name='blackbird-reference-id']")?.GetAttributeValue("content", null);
-
-        if (referenceId is null)
-            throw new Exception("Blackbird reference ID not found in the HTML file.");
+        var referenceId = doc.DocumentNode.SelectSingleNode($"//meta[@name='{Constants.Constants.BlackbirdReferenceId}']")?.GetAttributeValue("content", null) ?? null;
 
         return referenceId;
     }
