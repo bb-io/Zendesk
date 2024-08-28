@@ -15,4 +15,10 @@ public class ArticlePublishedResponse : ArticleResponse
     [Display("Section")]
     public string SectionId { get; set; }
     public string Title { get; set; }
+
+    [Display("Brand ID")]
+    public string BrandId { get; set; }
+
+    [Display("Account ID")]
+    public string AccountId { get; set; }
 }

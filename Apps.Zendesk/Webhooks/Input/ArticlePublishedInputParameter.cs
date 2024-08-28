@@ -11,5 +11,11 @@ namespace Apps.Zendesk.Webhooks.Input
     {
         [Display("Only source articles")]
         public bool? OnlyIfSource { get; set; }
+
+        [Display("Brand ID")]
+        public string? BrandId { get; set; }
+
+        [Display("Account ID")]
+        public string? AccountId { get; set; }
     }
 }
