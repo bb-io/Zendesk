@@ -374,6 +374,26 @@ public class WebhookList : BaseInvocable
         var data = JsonConvert.DeserializeObject<ArticlePayloadTemplate<PublishEvent>>(webhookRequest.Body.ToString());
         if (data is null) { throw new InvalidCastException(nameof(webhookRequest.Body)); }
 
+        if (input.BrandId != null && input.BrandId == data.Detail.BrandId)
+        {
+            return new WebhookResponse<ArticlePublishedResponse>
+            {
+                HttpResponseMessage = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                Result = null
+            };
+        }
+
+        if (input.AccountId != null && input.AccountId == data.AccountId.ToString())
+        {
+            return new WebhookResponse<ArticlePublishedResponse>
+            {
+                HttpResponseMessage = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                Result = null
+            };
+        }
+
         if (input.OnlyIfSource != null && input.OnlyIfSource.Value)
         {
             var locale = data.Event.Locale;
@@ -403,7 +423,9 @@ public class WebhookList : BaseInvocable
                 CategoryId = data.Event.CategoryId,
                 Locale = data.Event.Locale,
                 SectionId = data.Event.SectionId,
-                Title = data.Event.Title
+                Title = data.Event.Title,
+                BrandId = data.Detail.BrandId,
+                AccountId = data.AccountId.ToString(),
             }
         };
     }
