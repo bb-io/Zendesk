@@ -11,17 +11,12 @@ using Apps.Zendesk.Models.Responses.Wrappers;
 namespace Apps.Zendesk.Actions;
 
 [ActionList]
-public class CategoryActions : BaseInvocable
+public class CategoryActions(InvocationContext invocationContext) : BaseInvocable(invocationContext)
 {
     private IEnumerable<AuthenticationCredentialsProvider> Creds =>
         InvocationContext.AuthenticationCredentialsProviders;
 
-    private ZendeskClient Client { get; }
-
-    public CategoryActions(InvocationContext invocationContext) : base(invocationContext)
-    {
-        Client = new ZendeskClient(invocationContext);
-    }
+    private ZendeskClient Client { get; } = new(invocationContext);
 
 
     [Action("Get all categories", Description = "Get all categories, optionally those that are missing translations")]

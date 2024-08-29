@@ -1,7 +1,10 @@
-﻿namespace Apps.Zendesk.Webhooks.Payload.Articles;
+﻿using Newtonsoft.Json;
+
+namespace Apps.Zendesk.Webhooks.Payload.Articles;
 
 public class ArticlePayloadTemplate<T>
 {
+    [JsonProperty("account_id")]
     public int AccountId { get; set; }
     public Detail Detail { get; set; }
     public T Event { get; set; }
@@ -14,6 +17,7 @@ public class ArticlePayloadTemplate<T>
 
 public class Detail
 {
+    [JsonProperty("brand_id")]
     public string BrandId { get; set; }
     public string Id { get; set; }
 }
