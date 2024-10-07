@@ -85,5 +85,9 @@ public class Article
 
     [Display("Content (HTML)")]
     [JsonProperty("body")]
-    public string Body { get; set; }        
+    public string Body { get; set; }      
+
+    [Display("Labels")]
+    [JsonProperty("label_names")]
+    public IEnumerable<string> Labels { get; set; }        
 }
