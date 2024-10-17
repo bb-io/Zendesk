@@ -79,20 +79,20 @@ public class ArticleActions : BaseInvocable
     }
 
     [Action("Get article", Description = "Get information on a specific article")]
-    public async Task<ArticleWithLabels> GetArticle([ActionParameter] ArticleIdentifier article)
+    public async Task<Article> GetArticle([ActionParameter] ArticleIdentifier article)
     {
         var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}", Method.Get, Creds);
         var response = await Client.ExecuteWithHandling<SingleArticle>(request);
-        var labels = new List<string>();
+        //var labels = new List<string>();
 
-        try
-        {
-            var labelRequest = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}/labels", Method.Get, Creds);
-            var labelResponse = await Client.ExecuteWithHandling<LabelResponse>(labelRequest);
-            labels = labelResponse.Labels.Select(x => x.Name).ToList();
-        }
-        catch { }
-        return new(response.Article, labels);
+        //try
+        //{
+        //    var labelRequest = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}/labels", Method.Get, Creds);
+        //    var labelResponse = await Client.ExecuteWithHandling<LabelResponse>(labelRequest);
+        //    labels = labelResponse.Labels.Select(x => x.Name).ToList();
+        //}
+        //catch { }
+        return response.Article;
     }
 
 
