@@ -5,6 +5,8 @@ VisualStudioVersion = 17.5.33424.131
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apps.Zendesk", "Apps.Zendesk\Apps.Zendesk.csproj", "{3F3529CC-025A-4D77-8378-F15D1C2867B3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests.Zendesk", "Tests.Zendesk\Tests.Zendesk.csproj", "{B636EF93-DDD2-42B1-9594-9530BF857CCA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{3F3529CC-025A-4D77-8378-F15D1C2867B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3F3529CC-025A-4D77-8378-F15D1C2867B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3F3529CC-025A-4D77-8378-F15D1C2867B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B636EF93-DDD2-42B1-9594-9530BF857CCA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B636EF93-DDD2-42B1-9594-9530BF857CCA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B636EF93-DDD2-42B1-9594-9530BF857CCA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B636EF93-DDD2-42B1-9594-9530BF857CCA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
