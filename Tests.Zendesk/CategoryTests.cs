@@ -5,14 +5,14 @@ using ZendeskTests.Base;
 namespace Tests.Zendesk
 {
     [TestClass]
-    public class DataSources : TestBase
+    public class CategoryTests : TestBase
     {
         [TestMethod]
         public async Task CategoriesReturnsValues()
         {
             var action = new CategoryActions(InvocationContext);
 
-            var input = new OptionalMissingLocaleIdentifier{ };
+            var input = new OptionalMissingLocaleIdentifier { };
 
             var result = action.GetAllCategories(input);
 
@@ -24,19 +24,16 @@ namespace Tests.Zendesk
         }
 
         [TestMethod]
-        public async Task DataHandlerReturnsValues()
+        public async Task GetCategoryReturnsValues()
         {
-            //19612818365457
             var action = new CategoryActions(InvocationContext);
 
-            var input = new CategoryIdentifier {Id= "196128183657890" };
+            var input = new CategoryIdentifier { Id = "19612818365457" };
 
             var result = action.GetCategory(input);
 
-                Console.WriteLine($"{result.Result.Id} - {result.Result.Name}");
-                Assert.IsNotNull(result);
+            Console.WriteLine($"{result.Result.Id} - {result.Result.Name}");
+            Assert.IsNotNull(result);
         }
-
-
     }
 }

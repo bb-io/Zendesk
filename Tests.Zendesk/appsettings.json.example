@@ -1,6 +1,6 @@
 {
     "ConnectionDefinition": {
-        "access_token": "",
+        "Authorization": "",
         "api_endpoint": ""
     },
     "TestFolder": "TestFiles"

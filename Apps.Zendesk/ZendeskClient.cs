@@ -46,51 +46,48 @@ public class ZendeskClient : RestClient
 
     public async Task<RestResponse> ExecuteWithHandling(RestRequest request)
     {
+        RestResponse response;
+
         try
         {
-            //Context.Logger.LogInformation("zendesk-request", new object[] { request });
-
-            var response = await ExecuteAsync(request);
-
-            //Context.Logger.LogInformation("zendesk-response", new object[] { response });
-
-            if (response.IsSuccessStatusCode)
-                return response;
-
-            var responseContent = response.Content!;
-
-            var errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(responseContent);
-
-            if (errorResponse?.Error == null)
-            {
-                throw new PluginApplicationException($"Error: {responseContent} ({response.StatusCode})");
-            }
-
-            string exceptionMessage;
-
-            if (response.StatusCode is HttpStatusCode.NotFound)
-            {
-                exceptionMessage = errorResponse.Error.Title == "InvalidEndpoint"
-                    ? "Feature is not allowed for your Zendesk instance"
-                    : errorResponse.Error.Message;
-            }
-            else if (response.StatusCode is HttpStatusCode.Conflict)
-            {
-                exceptionMessage = errorResponse.Error.Title == "Conflict"
-                    ? "Authentication failed due to a conflict with an existing user ID"
-                    : errorResponse.Error.Message;
-            }
-            else
-            {
-                exceptionMessage = $"{errorResponse.Error.Title}: {errorResponse.Error.Message} ({response.StatusCode})";
-            }
-
-            throw new PluginApplicationException(exceptionMessage);
+            response = await ExecuteAsync(request);
         }
         catch (Exception ex)
         {
             throw new PluginApplicationException("Error:", ex);
         }
+
+        if (response.IsSuccessStatusCode)
+            return response;
+
+
+        var errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(response.Content);
+
+        if (errorResponse?.Error == null)
+        {
+            throw new PluginApplicationException($"Error: {response.Content} ({response.StatusCode})");
+        }
+
+        string exceptionMessage;
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            exceptionMessage = errorResponse.Error == "InvalidEndpoint"
+                ? "Feature is not allowed for your Zendesk instance"
+                : $"Error: {errorResponse.Error}";
+        }
+        else if (response.StatusCode == HttpStatusCode.Conflict)
+        {
+            exceptionMessage = errorResponse.Error == "Conflict"
+                ? "Authentication failed due to a conflict with an existing user ID"
+                : $"Error: {errorResponse.Error}";
+        }
+        else
+        {
+            exceptionMessage = $"{errorResponse.Error}: {errorResponse.Description} ({response.StatusCode})";
+        }
+
+        throw new PluginApplicationException($"{exceptionMessage}");
     }
 
     public async Task<T> ExecuteWithHandling<T>(RestRequest request)
