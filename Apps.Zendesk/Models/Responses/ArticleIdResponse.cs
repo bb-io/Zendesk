@@ -1,13 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿
+using Blackbird.Applications.Sdk.Common;
 
 namespace Apps.Zendesk.Models.Responses
 {
     public class ArticleIdResponse
     {
-        public string ArticleId {  get; set; }
+        [Display("Article ID")]
+        public string ArticleId { get; set; }
     }
 }
