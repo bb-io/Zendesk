@@ -229,18 +229,16 @@ public class ArticleActions : BaseInvocable
     public async Task<ArticleIdResponse> GetArticleIdFromHtmlFile([ActionParameter] FileRequest file)
     {
         using var stream = await _fileManagementClient.DownloadAsync(file.File);
-        using var reader = new StreamReader(stream);
-        var htmlContent = await reader.ReadToEndAsync();
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        var fileBytes = ms.ToArray();
 
-        var metaRegex = new Regex(
-            @"<meta\s+name\s*=\s*""blackbird-reference-id""\s+content\s*=\s*""(?<id>[^""]+)""[^>]*>",
-            RegexOptions.IgnoreCase);
+        var referenceId = FileTranslationRequest.ExtractBlackbirdId(fileBytes);
 
-        var match = metaRegex.Match(htmlContent);
-        if (!match.Success)
-            throw new PluginMisconfigurationException("Not found 'blackbird-reference-id' in metadata.");
+        if (string.IsNullOrWhiteSpace(referenceId))
+            throw new PluginMisconfigurationException("No ID was found in metadata.");
 
-       return new ArticleIdResponse { ArticleId = match.Groups["id"].Value };
+        return new ArticleIdResponse { ArticleId = referenceId };
     }
 
 
