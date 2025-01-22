@@ -24,9 +24,9 @@ namespace Tests.Zendesk
 
             var input1 = new FileRequest{ File = input };
             var result = await action.GetArticleIdFromHtmlFile(input1);
-            Console.WriteLine(result);
+            Console.WriteLine(result.ArticleId);
 
-            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.ArticleId);
         }
     }
 }

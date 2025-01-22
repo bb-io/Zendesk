@@ -226,7 +226,7 @@ public class ArticleActions : BaseInvocable
 
 
     [Action("Get article ID from HTML file", Description = "Return the article ID embedded in the HTML file")]
-    public async Task<string> GetArticleIdFromHtmlFile([ActionParameter] FileRequest file)
+    public async Task<ArticleIdResponse> GetArticleIdFromHtmlFile([ActionParameter] FileRequest file)
     {
         using var stream = await _fileManagementClient.DownloadAsync(file.File);
         using var reader = new StreamReader(stream);
@@ -240,7 +240,7 @@ public class ArticleActions : BaseInvocable
         if (!match.Success)
             throw new PluginMisconfigurationException("Not found 'blackbird-reference-id' in metadata.");
 
-        return match.Groups["id"].Value;
+       return new ArticleIdResponse { ArticleId = match.Groups["id"].Value };
     }
 
 
