@@ -14,6 +14,8 @@ using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Utils.Extensions.Files;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Apps.Zendesk.DataSourceHandlers;
+using Blackbird.Applications.Sdk.Common.Exceptions;
+using Blackbird.Applications.Sdk.Common.Files;
 
 namespace Apps.Zendesk.Actions;
 
@@ -221,6 +223,25 @@ public class ArticleActions : BaseInvocable
         var file = await _fileManagementClient.UploadAsync(stream, MediaTypeNames.Text.Html, $"{filename}.html");
         return new FileResponse { File = file };
     }
+
+
+    [Action("Get article ID from HTML file", Description = "Return the article ID embedded in the HTML file")]
+    public async Task<ArticleIdResponse> GetArticleIdFromHtmlFile([ActionParameter] FileRequest file)
+    {
+        using var stream = await _fileManagementClient.DownloadAsync(file.File);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        var fileBytes = ms.ToArray();
+
+        var referenceId = FileTranslationRequest.ExtractBlackbirdId(fileBytes);
+
+        if (string.IsNullOrWhiteSpace(referenceId))
+            throw new PluginMisconfigurationException("No ID was found in metadata.");
+
+        return new ArticleIdResponse { ArticleId = referenceId };
+    }
+
+
 
     [Action("Update article translation from HTML file",
         Description =
