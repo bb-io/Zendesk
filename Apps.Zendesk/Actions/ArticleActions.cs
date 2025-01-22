@@ -14,6 +14,8 @@ using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Utils.Extensions.Files;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Apps.Zendesk.DataSourceHandlers;
+using Blackbird.Applications.Sdk.Common.Exceptions;
+using Blackbird.Applications.Sdk.Common.Files;
 
 namespace Apps.Zendesk.Actions;
 
@@ -221,6 +223,27 @@ public class ArticleActions : BaseInvocable
         var file = await _fileManagementClient.UploadAsync(stream, MediaTypeNames.Text.Html, $"{filename}.html");
         return new FileResponse { File = file };
     }
+
+
+    [Action("Get article ID from HTML file", Description = "Return the article ID embedded in the HTML file")]
+    public async Task<string> GetArticleIdFromHtmlFile([ActionParameter] FileRequest file)
+    {
+        using var stream = await _fileManagementClient.DownloadAsync(file.File);
+        using var reader = new StreamReader(stream);
+        var htmlContent = await reader.ReadToEndAsync();
+
+        var metaRegex = new Regex(
+            @"<meta\s+name\s*=\s*""blackbird-reference-id""\s+content\s*=\s*""(?<id>[^""]+)""[^>]*>",
+            RegexOptions.IgnoreCase);
+
+        var match = metaRegex.Match(htmlContent);
+        if (!match.Success)
+            throw new PluginMisconfigurationException("Not found 'blackbird-reference-id' in metadata.");
+
+        return match.Groups["id"].Value;
+    }
+
+
 
     [Action("Update article translation from HTML file",
         Description =

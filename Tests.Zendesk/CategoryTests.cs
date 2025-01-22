@@ -1,5 +1,6 @@
 ﻿using Apps.Zendesk.Actions;
 using Apps.Zendesk.Models.Identifiers;
+using Blackbird.Applications.Sdk.Common.Files;
 using ZendeskTests.Base;
 
 namespace Tests.Zendesk
@@ -35,5 +36,6 @@ namespace Tests.Zendesk
             Console.WriteLine($"{result.Result.Id} - {result.Result.Name}");
             Assert.IsNotNull(result);
         }
+
     }
 }
