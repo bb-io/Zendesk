@@ -8,14 +8,14 @@ using RestSharp;
 
 namespace Apps.Zendesk.DataSourceHandlers;
 
-public class ArticleDataHandler : BaseInvocable, IDataSourceHandler
+public class ArticleDataHandler : BaseInvocable, IDataSourceItemHandler
 {
     private IEnumerable<AuthenticationCredentialsProvider> Creds =>
         InvocationContext.AuthenticationCredentialsProviders;
 
     public ArticleDataHandler(InvocationContext invocationContext) : base(invocationContext) {}
 
-    public Dictionary<string, string> GetData(DataSourceContext context)
+    public IEnumerable<DataSourceItem> GetData(DataSourceContext context)
     {
         var client = new ZendeskClient(InvocationContext);
         IEnumerable<Article> articles;
@@ -32,6 +32,6 @@ public class ArticleDataHandler : BaseInvocable, IDataSourceHandler
 
         return articles
             .OrderByDescending(x => x.UpdatedAt)
-            .ToDictionary(x => x.Id.ToString(), x => x.Title);
+            .Select(x => new DataSourceItem(x.Id.ToString(), x.Title));
     }
 }

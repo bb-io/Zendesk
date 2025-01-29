@@ -20,12 +20,16 @@ Before you can connect you need to make sure that:
 1. Navigate to apps and search for Zendesk. If you cannot find Zendesk then click _Add App_ in the top right corner, select Zendesk and add the app to your Blackbird environment.
 2. Click _Add Connection_.
 3. Name your connection for future reference e.g. 'My client'.
-4. Fill in the Base URL to the Zendesk instance you want to connect to. The base URL is of shape `https://<instance name>.zendesk.com`. You can usually copy this part of the URL when you are logged into your Zendesk instance.
+4. Fill in the Base URL to the Zendesk instance you want to connect to. The base URL is of shape `https://<instance name>.zendesk.com`. You can usually copy this part of the URL when you are logged into your Zendesk instance. Note: for different brands see disclaimer below.
 5. Click _Authorize connection_.
 6. Follow the instructions that Zendesk gives you, authorizing Blackbird.io to act on your behalf.
 7. When you return to Blackbird, confirm that the connection has appeared and the status is _Connected_.
 
 ![Connecting](image/README/1692612174111.png)
+
+> **Connecting to different brands**: If your Zendesk has multiple brands, you need to create a different connection for each separate brand. Brands are distinct by their base URL. You can find the base URL by going to *Settings > Account > Brand management > Brands* and viewing the *Subdomain* attribute of each brand. Use the Subdomain attribute in the Base URL connection input.
+
+![1738163882548](image/README/1738163882548.png)
 
 ## Actions
 
