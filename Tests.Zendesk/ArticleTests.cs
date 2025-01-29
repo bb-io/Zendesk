@@ -7,6 +7,7 @@ using Apps.Zendesk.Actions;
 using Apps.Zendesk.Models.Requests;
 using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Newtonsoft.Json;
 using ZendeskTests.Base;
 
 namespace Tests.Zendesk
@@ -28,5 +29,16 @@ namespace Tests.Zendesk
 
             Assert.IsNotNull(result.ArticleId);
         }
+
+        [TestMethod]
+        public async Task GetArticle_works()
+        {
+            var actions = new ArticleActions(InvocationContext, FileManager);
+            var result = await actions.GetArticle(new Apps.Zendesk.Models.Identifiers.ArticleIdentifier { Id = "32193792125201" });
+            Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
+
+            Assert.IsNotNull(result.Id);
+        }
+
     }
 }
