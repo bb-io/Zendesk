@@ -10,14 +10,11 @@ namespace Apps.Zendesk.Webhooks.Handlers;
 public class BaseWebhookHandler(InvocationContext invocationContext, string subEvent)
     : BaseInvocable(invocationContext), IWebhookEventHandler
 {
-    private IEnumerable<AuthenticationCredentialsProvider> Creds =>
-        InvocationContext.AuthenticationCredentialsProviders;
-
     private ZendeskClient Client { get; } = new(invocationContext);
 
     public async Task SubscribeAsync(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProvider, Dictionary<string, string> values)
     {
-        var request = new ZendeskRequest($"/api/v2/webhooks", Method.Post, Creds);
+        var request = new ZendeskRequest($"/api/v2/webhooks", Method.Post);
         request.AddNewtonJson(new
         {
             webhook = new
@@ -39,12 +36,12 @@ public class BaseWebhookHandler(InvocationContext invocationContext, string subE
 
     public async Task UnsubscribeAsync(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProvider, Dictionary<string, string> values)
     {
-        var getRequest = new ZendeskRequest($"/api/v2/webhooks?filter[name_contains]={subEvent}", Method.Get, Creds);
+        var getRequest = new ZendeskRequest($"/api/v2/webhooks?filter[name_contains]={subEvent}", Method.Get);
         var webhooks = await Client.GetAsync<WebhooksListResponse>(getRequest);
         var weebhook = webhooks!.Webhooks.FirstOrDefault(x => x.Endpoint == values["payloadUrl"])
             ?? throw new Exception("There is no webhook with the specified endpoint that matches the payload url");
 
-        var deleteRequest = new ZendeskRequest($"/api/v2/webhooks/{weebhook.Id}", Method.Delete, Creds);
+        var deleteRequest = new ZendeskRequest($"/api/v2/webhooks/{weebhook.Id}", Method.Delete);
         await Client.ExecuteAsync(deleteRequest);
     }
 }

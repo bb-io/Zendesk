@@ -13,7 +13,7 @@ public class Article
     [JsonProperty("html_url")]
     public string HtmlUrl { get; set; }
 
-    [Display("Author")]
+    [Display("Author ID")]
     [JsonProperty("author_id")]
     public string AuthorId { get; set; }
 
@@ -45,7 +45,7 @@ public class Article
     [JsonProperty("vote_count")]
     public int VoteCount { get; set; }
 
-    [Display("Section")]
+    [Display("Section ID")]
     [JsonProperty("section_id")]
     public string SectionId { get; set; }
 
@@ -65,7 +65,7 @@ public class Article
     [JsonProperty("name")]
     public string Name { get; set; }
 
-    [Display("Title")]
+    [DefinitionIgnore]
     [JsonProperty("title")]
     public string Title { get; set; }
 
@@ -83,9 +83,9 @@ public class Article
 
     //public long PermissionGroupId { get; set; }
 
-    [Display("Content (HTML)")]
+    [DefinitionIgnore]
     [JsonProperty("body")]
-    public string Body { get; set; }      
+    public string Body { get; set; }
 
     [Display("Labels")]
     [JsonProperty("label_names")]

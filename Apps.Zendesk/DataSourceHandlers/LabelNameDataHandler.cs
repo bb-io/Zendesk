@@ -9,9 +9,6 @@ namespace Apps.Zendesk.DataSourceHandlers;
 
 public class LabelNameDataHandler : BaseInvocable, IAsyncDataSourceHandler
 {
-    private IEnumerable<AuthenticationCredentialsProvider> Creds =>
-        InvocationContext.AuthenticationCredentialsProviders;
-
     public LabelNameDataHandler(InvocationContext invocationContext) : base(invocationContext)
     {
     }
@@ -22,7 +19,7 @@ public class LabelNameDataHandler : BaseInvocable, IAsyncDataSourceHandler
         try
         {
             var client = new ZendeskClient(InvocationContext);
-            var request = new ZendeskRequest($"/api/v2/help_center/articles/labels", Method.Get, Creds);
+            var request = new ZendeskRequest($"/api/v2/help_center/articles/labels", Method.Get);
             var response = await client.ExecuteAsync<LabelResponse>(request);
 
             return response.Data!.Labels

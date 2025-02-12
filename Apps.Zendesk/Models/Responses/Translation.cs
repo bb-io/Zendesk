@@ -5,7 +5,7 @@ namespace Apps.Zendesk.Models.Responses;
 
 public class Translation
 {
-    [Display("Translation")]
+    [Display("Translation ID")]
     [JsonProperty("id")]
     public string Id { get; set; }
 
@@ -21,11 +21,11 @@ public class Translation
     [JsonProperty("locale")]
     public string Locale { get; set; }
 
-    [Display("Title")]
+    [DefinitionIgnore]
     [JsonProperty("title")]
     public string Title { get; set; }
 
-    [Display("Content")]
+    [DefinitionIgnore]
     [JsonProperty("body")]
     public string Body { get; set; }
 

@@ -13,9 +13,6 @@ namespace Apps.Zendesk.Polling;
 [PollingEventList]
 public class PollingList : BaseInvocable
 {
-    private IEnumerable<AuthenticationCredentialsProvider> Creds =>
-        InvocationContext.AuthenticationCredentialsProviders;
-
     private ZendeskClient Client { get; }
 
     public PollingList(InvocationContext invocationContext)
@@ -25,14 +22,13 @@ public class PollingList : BaseInvocable
     }
 
     [PollingEvent("On labels added to articles", "On any new labels are added to articles")]
-    public PollingEventResponse<ArticleLabelsMemory, ListArticlesResponse> OnLabelsAddedToArticles(
+    public async Task<PollingEventResponse<ArticleLabelsMemory, ListArticlesResponse>> OnLabelsAddedToArticles(
         PollingEventRequest<ArticleLabelsMemory> request,
         [PollingEventParameter] OnLabelsAddedInput input)
     {
         var articlesRequest =
-            new ZendeskRequest($"/api/v2/help_center/articles?label_names={string.Join(',', input.Labels)}",
-                Method.Get, Creds);
-        var response = Client.GetPaginated<MultipleArticles>(articlesRequest)
+            new ZendeskRequest($"/api/v2/help_center/articles?label_names={string.Join(',', input.Labels)}", Method.Get);
+        var response = (await Client.GetPaginated<MultipleArticles>(articlesRequest))
             .SelectMany(x => x.Articles)
             .ToArray();
 

@@ -48,7 +48,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="TestFiles\Input\" />
     <Folder Include="TestFiles\Output\" />
   </ItemGroup>
 

@@ -6,7 +6,7 @@ namespace Apps.Zendesk.Models.Identifiers;
 
 public class TicketIdentifier
 {
-    [Display("Ticket")]
+    [Display("Ticket ID")]
     [DataSource(typeof(TicketDataHandler))]
     public string Id { get; set; }
 }

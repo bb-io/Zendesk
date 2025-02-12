@@ -7,18 +7,15 @@ using RestSharp;
 
 namespace Apps.Zendesk.DataSourceHandlers;
 
-public class UserSegmentDataHandler : BaseInvocable, IDataSourceHandler
+public class UserSegmentDataHandler : BaseInvocable, IAsyncDataSourceHandler
 {
-    private IEnumerable<AuthenticationCredentialsProvider> Creds =>
-        InvocationContext.AuthenticationCredentialsProviders;
-
     public UserSegmentDataHandler(InvocationContext invocationContext) : base(invocationContext) { }
 
-    public Dictionary<string, string> GetData(DataSourceContext context)
+    public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
         var client = new ZendeskClient(InvocationContext);
-        var request = new ZendeskRequest("/api/v2/help_center/user_segments/applicable", Method.Get, Creds);
-        var segments = client.GetPaginated<MultipleUserSegments>(request).SelectMany(x => x.UserSegments);
+        var request = new ZendeskRequest("/api/v2/help_center/user_segments/applicable", Method.Get);
+        var segments = (await client.GetPaginated<MultipleUserSegments>(request)).SelectMany(x => x.UserSegments);
 
         return segments
             .OrderBy(x => x.Name)

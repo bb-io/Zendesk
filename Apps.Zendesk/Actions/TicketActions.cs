@@ -13,9 +13,6 @@ namespace Apps.Zendesk.Actions;
 [ActionList]
 public class TicketActions : BaseInvocable
 {
-    private IEnumerable<AuthenticationCredentialsProvider> Creds =>
-        InvocationContext.AuthenticationCredentialsProviders;
-
     private ZendeskClient Client { get; }
 
     public TicketActions(InvocationContext invocationContext) : base(invocationContext)
@@ -26,7 +23,7 @@ public class TicketActions : BaseInvocable
     [Action("Get ticket", Description = "Get a specific ticket")]
     public async Task<Ticket> GetTicket([ActionParameter] TicketIdentifier ticket)
     {
-        var request = new ZendeskRequest($"/api/v2/tickets/{ticket.Id}", Method.Get, Creds);
+        var request = new ZendeskRequest($"/api/v2/tickets/{ticket.Id}", Method.Get);
         var response = await Client.ExecuteWithHandling<SingleTicket>(request);
         return response.Ticket;
     }
@@ -34,7 +31,7 @@ public class TicketActions : BaseInvocable
     [Action("Create ticket", Description = "Create a new ticket")]
     public async Task<Ticket> CreateTicket([ActionParameter] TicketRequest input)
     {
-        var request = new ZendeskRequest("/api/v2/tickets/", Method.Post, Creds);
+        var request = new ZendeskRequest("/api/v2/tickets/", Method.Post);
         request.AddNewtonJson(input.Convert());
         var response = await Client.ExecuteWithHandling<SingleTicket>(request);
         return response.Ticket;
@@ -43,7 +40,7 @@ public class TicketActions : BaseInvocable
     [Action("Update ticket", Description = "Update a specific ticket")]
     public async Task<Ticket> UpdateTicket([ActionParameter] TicketIdentifier ticket, [ActionParameter] TicketRequest input)
     {
-        var request = new ZendeskRequest($"/api/v2/tickets/{ticket.Id}", Method.Put, Creds);
+        var request = new ZendeskRequest($"/api/v2/tickets/{ticket.Id}", Method.Put);
         request.AddNewtonJson(input.Convert());
         var response = await Client.ExecuteWithHandling<SingleTicket>(request);
         return response.Ticket;
@@ -52,7 +49,7 @@ public class TicketActions : BaseInvocable
     [Action("Delete ticket", Description = "Delete specific ticket")]
     public Task DeleteTicket([ActionParameter] TicketIdentifier ticket)
     {
-        var request = new ZendeskRequest($"/api/v2/tickets/{ticket.Id}", Method.Delete, Creds);
+        var request = new ZendeskRequest($"/api/v2/tickets/{ticket.Id}", Method.Delete);
         return Client.ExecuteWithHandling(request);
     }
 }

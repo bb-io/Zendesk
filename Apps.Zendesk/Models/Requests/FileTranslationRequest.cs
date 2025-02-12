@@ -7,6 +7,7 @@ using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Utils.Extensions.Files;
 using System.Web;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 
 namespace Apps.Zendesk.Models.Requests;
 
@@ -46,7 +47,7 @@ public class FileTranslationRequest
         var body = doc.DocumentNode.SelectSingleNode("/html/body")?.InnerHtml;
 
         if (title is null || body is null)
-            throw new Exception("Translation HTML file is in a wrong format, please check if it is not corrupted");
+            throw new PluginMisconfigurationException("Translation HTML file is in a wrong format, please check if it is not corrupted");
             
         return new
         {

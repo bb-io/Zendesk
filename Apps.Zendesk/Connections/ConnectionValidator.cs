@@ -10,7 +10,7 @@ public class ConnectionValidator : IConnectionValidator
         IEnumerable<AuthenticationCredentialsProvider> authProviders, CancellationToken cancellationToken)
     {
         var client = new ZendeskClient(new() { AuthenticationCredentialsProviders = authProviders });
-        var request = new ZendeskRequest("/api/v2/users/me", Method.Get, authProviders);
+        var request = new ZendeskRequest("/api/v2/users/me", Method.Get);
 
         try
         {
