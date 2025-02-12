@@ -7,18 +7,15 @@ using Apps.Zendesk.Models.Responses.Wrappers;
 
 namespace Apps.Zendesk.DataSourceHandlers;
 
-public class CategoryDataHandler : BaseInvocable, IDataSourceHandler
+public class CategoryDataHandler : BaseInvocable, IAsyncDataSourceHandler
 {
-    private IEnumerable<AuthenticationCredentialsProvider> Creds =>
-        InvocationContext.AuthenticationCredentialsProviders;
-
     public CategoryDataHandler(InvocationContext invocationContext) : base(invocationContext) { }
 
-    public Dictionary<string, string> GetData(DataSourceContext context)
+    public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
         var client = new ZendeskClient(InvocationContext);
-        var request = new ZendeskRequest("/api/v2/help_center/categories", Method.Get, Creds);
-        var categories = client.GetPaginated<MultipleCategories>(request).SelectMany(x => x.Categories);
+        var request = new ZendeskRequest("/api/v2/help_center/categories", Method.Get);
+        var categories = (await client.GetPaginated<MultipleCategories>(request)).SelectMany(x => x.Categories);
 
         return categories
             .OrderByDescending(x => x.UpdatedAt)

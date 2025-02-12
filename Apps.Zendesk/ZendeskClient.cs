@@ -17,6 +17,8 @@ public class ZendeskClient : RestClient
             { ThrowOnAnyError = false, BaseUrl = GetUri(invocationContext.AuthenticationCredentialsProviders) })
     {
         Context = invocationContext;
+        this.AddDefaultHeader("Authorization", invocationContext.AuthenticationCredentialsProviders.First(p => p.KeyName == "Authorization").Value);
+        this.AddDefaultHeader("accept", "*/*");
     }
 
     private static Uri GetUri(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders)
@@ -25,14 +27,14 @@ public class ZendeskClient : RestClient
         return new Uri(url);
     }
 
-    public List<T> GetPaginated<T>(ZendeskRequest request) where T : PaginatedResponse
+    public async Task<List<T>> GetPaginated<T>(ZendeskRequest request) where T : PaginatedResponse
     {
         request.AddQueryParameter("page[size]", 100);
         var results = new List<T>();
         string? next_page;
         do
         {
-            var response = Execute<T>(request);
+            var response = await ExecuteWithHandling<T>(request);
 
             next_page = response.NextPage;
             results.Add(response);
@@ -41,8 +43,21 @@ public class ZendeskClient : RestClient
         return results;
     }
 
-    public T Execute<T>(ZendeskRequest request)
-        => ExecuteWithHandling<T>(request).GetAwaiter().GetResult();
+    public async Task<List<T>> GetPaginatedResults<T>(ZendeskRequest request)
+    {
+        request.AddQueryParameter("per_page", 100);
+        var results = new List<T>();
+        string? next_page;
+        do
+        {
+            var response = await ExecuteWithHandling<PaginatedResultResponse<T>>(request);
+
+            next_page = response.Next;
+            results.AddRange(response.Results);
+        } while (next_page != null);
+
+        return results;
+    }
 
     public async Task<RestResponse> ExecuteWithHandling(RestRequest request)
     {
@@ -73,7 +88,7 @@ public class ZendeskClient : RestClient
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
             exceptionMessage = errorResponse.Error == "InvalidEndpoint"
-                ? "Feature is not allowed for your Zendesk instance"
+                ? "This feature is not allowed for your Zendesk instance"
                 : $"Error: {errorResponse.Error}";
         }
         else if (response.StatusCode == HttpStatusCode.Conflict)

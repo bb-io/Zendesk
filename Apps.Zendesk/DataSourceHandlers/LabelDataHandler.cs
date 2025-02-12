@@ -7,22 +7,19 @@ using RestSharp;
 
 namespace Apps.Zendesk.DataSourceHandlers
 {
-    public class LabelDataHandler : BaseInvocable, IDataSourceHandler
+    public class LabelDataHandler : BaseInvocable, IAsyncDataSourceHandler
     {
-        private IEnumerable<AuthenticationCredentialsProvider> Creds =>
-            InvocationContext.AuthenticationCredentialsProviders;
-
         public LabelDataHandler(InvocationContext invocationContext) : base(invocationContext)
         {
         }
 
-        public Dictionary<string, string> GetData(DataSourceContext context)
+        public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
         {
             try
             {
                 var client = new ZendeskClient(InvocationContext);
-                var request = new ZendeskRequest($"/api/v2/help_center/articles/labels", Method.Get, Creds);
-                var response = client.Execute<LabelResponse>(request);
+                var request = new ZendeskRequest($"/api/v2/help_center/articles/labels", Method.Get);
+                var response = await client.ExecuteWithHandling<LabelResponse>(request);
 
                 return response.Labels
                     .Where(x => context.SearchString == null ||

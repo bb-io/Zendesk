@@ -5,6 +5,6 @@ namespace Apps.Zendesk.Models.Responses;
 
 public class FileResponse
 {
-    [Display("File")]
+    [Display("Content file")]
     public FileReference File { get; set; }
 }

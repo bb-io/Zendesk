@@ -13,9 +13,6 @@ namespace Apps.Zendesk.Actions;
 [ActionList]
 public class CategoryActions(InvocationContext invocationContext) : BaseInvocable(invocationContext)
 {
-    private IEnumerable<AuthenticationCredentialsProvider> Creds =>
-        InvocationContext.AuthenticationCredentialsProviders;
-
     private ZendeskClient Client { get; } = new(invocationContext);
 
 
@@ -23,8 +20,8 @@ public class CategoryActions(InvocationContext invocationContext) : BaseInvocabl
     public async Task<List<Category>> GetAllCategories([ActionParameter] OptionalMissingLocaleIdentifier missingLocalesInput)
     {
         var endpoint = $"/api/v2/help_center/categories";
-        var request = new ZendeskRequest(endpoint, Method.Get, Creds);
-        var categories = Client.GetPaginated<MultipleCategories>(request).SelectMany(x => x.Categories);
+        var request = new ZendeskRequest(endpoint, Method.Get);
+        var categories = (await Client.GetPaginated<MultipleCategories>(request)).SelectMany(x => x.Categories);
 
         if (missingLocalesInput.Locale != null)
         {
@@ -45,7 +42,7 @@ public class CategoryActions(InvocationContext invocationContext) : BaseInvocabl
     public async Task<Category> GetCategory([ActionParameter] CategoryIdentifier category)
     {
         var endpoint = $"/api/v2/help_center/categories/{category.Id}";
-        var request = new ZendeskRequest(endpoint, Method.Get, Creds);
+        var request = new ZendeskRequest(endpoint, Method.Get);
         var response = await Client.ExecuteWithHandling<SingleCategory>(request);
         return response.Category;
     }
@@ -53,15 +50,15 @@ public class CategoryActions(InvocationContext invocationContext) : BaseInvocabl
     [Action("Get category articles", Description = "Get all articles that belong to a specific category")]
     public async Task<List<Article>> GetArticles([ActionParameter] CategoryIdentifier category)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/categories/{category.Id}/articles", Method.Get, Creds);
-        var articles = Client.GetPaginated<MultipleArticles>(request).SelectMany(x => x.Articles);
+        var request = new ZendeskRequest($"/api/v2/help_center/categories/{category.Id}/articles", Method.Get);
+        var articles = (await Client.GetPaginated<MultipleArticles>(request)).SelectMany(x => x.Articles);
         return articles.ToList();
     }
 
     [Action("Create category", Description = "Create a new category")]
     public async Task<Category> CreateCategory([ActionParameter] LocaleIdentifier locale, [ActionParameter] CategoryRequest input)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/{locale.Locale}/categories", Method.Post, Creds);
+        var request = new ZendeskRequest($"/api/v2/help_center/{locale.Locale}/categories", Method.Post);
         request.AddNewtonJson(new { category = input });
         var response = await Client.ExecuteWithHandling<SingleCategory>(request);
         return response.Category;
@@ -70,7 +67,7 @@ public class CategoryActions(InvocationContext invocationContext) : BaseInvocabl
     [Action("Update category", Description = "Update a category")]
     public async Task<Category> UpdateSection([ActionParameter] CategoryIdentifier category, [ActionParameter] CategoryRequest input)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/categories/{category.Id}", Method.Put, Creds);
+        var request = new ZendeskRequest($"/api/v2/help_center/categories/{category.Id}", Method.Put);
         request.AddNewtonJson(new { category = input });
         var response = await Client.ExecuteWithHandling<SingleCategory>(request);
         return response.Category;
@@ -79,22 +76,22 @@ public class CategoryActions(InvocationContext invocationContext) : BaseInvocabl
     [Action("Delete category", Description = "Delete a category")]
     public async Task DeleteCategory([ActionParameter] CategoryIdentifier category)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/categories/{category.Id}", Method.Delete, Creds);
+        var request = new ZendeskRequest($"/api/v2/help_center/categories/{category.Id}", Method.Delete);
         await Client.ExecuteWithHandling(request);
     }
 
     [Action("Get all category translations", Description = "Get all existing translations of this category")]
     public async Task<List<Translation>> GetCategoryTranslations([ActionParameter] CategoryIdentifier category)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/categories/{category.Id}/translations", Method.Get, Creds);
-        var translations = Client.GetPaginated<MultipleTranslations>(request).SelectMany(x => x.Translations);
+        var request = new ZendeskRequest($"/api/v2/help_center/categories/{category.Id}/translations", Method.Get);
+        var translations = (await Client.GetPaginated<MultipleTranslations>(request)).SelectMany(x => x.Translations);
         return translations.ToList();
     }
 
     [Action("Get category translation", Description = "Get the translation of a category for a specific locale")]
     public async Task<Translation> GetCategoryTranslation([ActionParameter] CategoryIdentifier category, [ActionParameter] LocaleIdentifier locale)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/categories/{category.Id}/translations/{locale.Locale}", Method.Get, Creds);
+        var request = new ZendeskRequest($"/api/v2/help_center/categories/{category.Id}/translations/{locale.Locale}", Method.Get);
         var response = await Client.ExecuteWithHandling<SingleTranslation>(request);
         return response.Translation;
     }
@@ -102,7 +99,7 @@ public class CategoryActions(InvocationContext invocationContext) : BaseInvocabl
     [Action("Get category missing translations", Description = "Get the locales that are missing for this category")]
     public async Task<MissingLocales> GetCategoryMissingTranslations([ActionParameter] CategoryIdentifier category)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/categories/{category.Id}/translations/missing", Method.Get, Creds);
+        var request = new ZendeskRequest($"/api/v2/help_center/categories/{category.Id}/translations/missing", Method.Get);
         return await Client.ExecuteWithHandling<MissingLocales>(request);
     }
 
@@ -111,7 +108,7 @@ public class CategoryActions(InvocationContext invocationContext) : BaseInvocabl
     {
         var missingLocales = await GetCategoryMissingTranslations(category);
         var isLocaleMissing = missingLocales.Locales.Contains(input.Locale);
-        var request = ZendeskRequest.CreateTranslationUpsertRequest(isLocaleMissing, $"categories/{category.Id}", input.Locale, Creds);
+        var request = ZendeskRequest.CreateTranslationUpsertRequest(isLocaleMissing, $"categories/{category.Id}", input.Locale);
         request.AddNewtonJson(input.Convert(isLocaleMissing));
         var response = await Client.ExecuteWithHandling<SingleTranslation>(request);
         return response.Translation;

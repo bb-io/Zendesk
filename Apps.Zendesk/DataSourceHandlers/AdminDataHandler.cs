@@ -7,19 +7,16 @@ using RestSharp;
 
 namespace Apps.Zendesk.DataSourceHandlers;
 
-public class AdminDataHandler : BaseInvocable, IDataSourceHandler
+public class AdminDataHandler : BaseInvocable, IAsyncDataSourceHandler
 {
-    private IEnumerable<AuthenticationCredentialsProvider> Creds =>
-        InvocationContext.AuthenticationCredentialsProviders;
-
     public AdminDataHandler(InvocationContext invocationContext) : base(invocationContext) { }
 
-    public Dictionary<string, string> GetData(DataSourceContext context)
+    public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
         var client = new ZendeskClient(InvocationContext);
-        var request = new ZendeskRequest("/api/v2/users", Method.Get, Creds);
+        var request = new ZendeskRequest("/api/v2/users", Method.Get);
         request.AddQueryParameter("role", "admin");
-        var users = client.GetPaginated<MultipleUsers>(request).SelectMany(x => x.Users);
+        var users = (await client.GetPaginated<MultipleUsers>(request)).SelectMany(x => x.Users);
 
         return users
             .OrderBy(x => x.Name)

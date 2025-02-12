@@ -11,9 +11,6 @@ namespace Apps.Zendesk.Actions;
 [ActionList]
 public class HelpCenterActions : BaseInvocable
 {
-    private IEnumerable<AuthenticationCredentialsProvider> Creds =>
-        InvocationContext.AuthenticationCredentialsProviders;
-
     private ZendeskClient Client { get; }
 
     public HelpCenterActions(InvocationContext invocationContext) : base(invocationContext)
@@ -21,17 +18,10 @@ public class HelpCenterActions : BaseInvocable
         Client = new ZendeskClient(invocationContext);
     }
 
-    [Action("Get helpcenter locales", Description = "Get all the activated helpcenter locales")]
-    public EnabledLocales ListLocales()
+    [Action("Search helpcenter locales", Description = "Get all the activated helpcenter locales")]
+    public async Task<EnabledLocales> ListLocales()
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/locales", Method.Get, Creds);
-        return Client.Get<EnabledLocales>(request);
-    }
-
-    [Action("Delete translation", Description = "Delete a specific translation")]
-    public async Task DeleteTranslation([ActionParameter] TranslationIdentifier translation)
-    {
-        var request = new ZendeskRequest($"/api/v2/help_center/translations/{translation.Id}", Method.Delete, Creds);
-        await Client.ExecuteWithHandling(request);
+        var request = new ZendeskRequest($"/api/v2/help_center/locales", Method.Get);
+        return await Client.ExecuteWithHandling<EnabledLocales>(request);
     }
 }

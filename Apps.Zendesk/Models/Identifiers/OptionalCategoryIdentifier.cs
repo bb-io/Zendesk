@@ -6,7 +6,7 @@ namespace Apps.Zendesk.Models.Identifiers;
 
 public class OptionalCategoryIdentifier
 {
-    [Display("Category")]
+    [Display("Category ID")]
     [DataSource(typeof(CategoryDataHandler))]
     public string? Id { get; set; }
 }

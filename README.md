@@ -17,7 +17,7 @@ Before you can connect you need to make sure that:
 
 ## Connecting
 
-1. Navigate to apps and search for Zendesk. If you cannot find Zendesk then click _Add App_ in the top right corner, select Zendesk and add the app to your Blackbird environment.
+1. Navigate to apps and search for Zendesk.
 2. Click _Add Connection_.
 3. Name your connection for future reference e.g. 'My client'.
 4. Fill in the Base URL to the Zendesk instance you want to connect to. The base URL is of shape `https://<instance name>.zendesk.com`. You can usually copy this part of the URL when you are logged into your Zendesk instance. Note: for different brands see disclaimer below.
@@ -35,24 +35,17 @@ Before you can connect you need to make sure that:
 
 ### General
 
-- **Get helpcenter locales** returns both the default locale of the helpcenter, as well as the list of locales that have been configured in Zendesk. You can find these settings in the Zendesk help center > Settings > Language settings.
-- **Delete translation** can be used with any translation retrieved from articles, categories or sections.
+- **Search helpcenter locales** returns both the default locale of the helpcenter, as well as the list of locales that have been configured in Zendesk. You can find these settings in the Zendesk help center > Settings > Language settings.
 
 ### Articles
 
-- **Get all articles** fetches all articles that have updated since a configurable amount of hours. You can use this endpoint to schedule birds that fetch all the updated content in order to translate this content. Optionally you can also specify the category, which will limit the search to that specific category. You can also specify the _Missing translation in_ variable, in which case this action will only return articles that are actually missing translations in that language.
-- **Create/update/archive article**.
-- **Get article missing translations** returns a list of locales that have been configured in Zendesk but are not present for this article. It can be used to create the missing translations.
-- **Update article translation** creates a translation if there is none, or updates the translation if it already exists.
-- **Get article** returns all article information. If you are on a professional or enterprise plan it will also return its labels.
-- **Get article translation** returns an article translation's information. If you are on a professional or enterprise plan it will also return its labels.
+- **Search articles** search articles using various filter parameters
+- **Get/create/update/archive article (metadata)** used to configure metadata variables such as section, author, position, permission group, user segment, etc.
+- **Search article missing locales** returns a list of locales that have been configured in Zendesk but are not present for this article. It can be used to create the missing translations.
+- **Download article content** downloads the translatable content of an article as a file. Use this action in conjunction with some translation app and 'Upload article content'.
+- **Upload article content** updates the translation for an article, creates a new translation if there is none. Takes a translated file (HTML) as input. As the article ID is included in the head of the HTML file, it will update the correct article, but you can specify the `Article ID` in the action as well.
 - **Add label to article** on a professional or enterprise plan, it adds a label to an article.
 - **Delete label from article** on a professional or enterprise plan, it deletes a label from an article.
-
-Furthermore, we have created a useful set of actions in order to treat Zendesk articles as HTML files. This allows you to create workflows translating Zendesk articles without individually sending the title and content strings for translation.
-
-- **Get article as HTML file** returns an HTML file with the header title as the article title and the `Article ID` included in the head as a `meta` tag. The body is populated with the article content. This can be used to send the article for translation.
-- **Update article translation from HTML file** file expects an HTML file with a similar structure as the previous action. It behaves the same as Update article translation. As the article ID is included in the head of the HTML file, it will update the correct article, but you can specify the `Article ID` in the action as well.
 
 ![HTML articles](image/README/1692613846802.png)
 

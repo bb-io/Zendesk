@@ -7,18 +7,15 @@ using RestSharp;
 
 namespace Apps.Zendesk.DataSourceHandlers;
 
-public class PermissionGroupDataHandler : BaseInvocable, IDataSourceHandler
+public class PermissionGroupDataHandler : BaseInvocable, IAsyncDataSourceHandler
 {
-    private IEnumerable<AuthenticationCredentialsProvider> Creds =>
-        InvocationContext.AuthenticationCredentialsProviders;
-
     public PermissionGroupDataHandler(InvocationContext invocationContext) : base(invocationContext) { }
 
-    public Dictionary<string, string> GetData(DataSourceContext context)
+    public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
         var client = new ZendeskClient(InvocationContext);
-        var request = new ZendeskRequest("/api/v2/guide/permission_groups", Method.Get, Creds);
-        var groups = client.GetPaginated<MultiplePermissionGroups>(request).SelectMany(x => x.PermissionGroups);
+        var request = new ZendeskRequest("/api/v2/guide/permission_groups", Method.Get);
+        var groups = (await client.GetPaginated<MultiplePermissionGroups>(request)).SelectMany(x => x.PermissionGroups);
 
         return groups
             .OrderBy(x => x.Name)

@@ -8,26 +8,23 @@ using RestSharp;
 
 namespace Apps.Zendesk.DataSourceHandlers;
 
-public class ArticleDataHandler : BaseInvocable, IDataSourceItemHandler
+public class ArticleDataHandler : BaseInvocable, IAsyncDataSourceItemHandler
 {
-    private IEnumerable<AuthenticationCredentialsProvider> Creds =>
-        InvocationContext.AuthenticationCredentialsProviders;
-
     public ArticleDataHandler(InvocationContext invocationContext) : base(invocationContext) {}
 
-    public IEnumerable<DataSourceItem> GetData(DataSourceContext context)
+    public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
         var client = new ZendeskClient(InvocationContext);
         IEnumerable<Article> articles;
         if (string.IsNullOrEmpty(context.SearchString))
         {
-            var request = new ZendeskRequest("/api/v2/help_center/articles", Method.Get, Creds);
-            articles = client.Execute<MultipleArticles>(request).Articles;
+            var request = new ZendeskRequest("/api/v2/help_center/articles", Method.Get);
+            articles = (await client.ExecuteWithHandling<MultipleArticles>(request)).Articles;
         } else
         {
-            var request = new ZendeskRequest("/api/v2/help_center/articles/search", Method.Get, Creds);
+            var request = new ZendeskRequest("/api/v2/help_center/articles/search", Method.Get);
             request.AddQueryParameter("query", context.SearchString);
-            articles = client.Execute<SearchResponse<Article>>(request).Results;
+            articles = (await client.ExecuteWithHandling<SearchResponse<Article>>(request)).Results;
         }
 
         return articles

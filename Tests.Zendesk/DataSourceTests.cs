@@ -22,7 +22,7 @@ namespace Tests.Zendesk
         {
             var handler = new ArticleDataHandler(InvocationContext);
 
-            var result = handler.GetData(new DataSourceContext { });
+            var result = await handler.GetDataAsync(new DataSourceContext { }, CancellationToken.None);
 
             Console.WriteLine($"Total: {result.Count()}");
             foreach (var item in result)

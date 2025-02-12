@@ -18,9 +18,6 @@ namespace Apps.Zendesk.Webhooks;
 [WebhookList]
 public class WebhookList : BaseInvocable
 {
-    private IEnumerable<AuthenticationCredentialsProvider> Creds =>
-        InvocationContext.AuthenticationCredentialsProviders;
-
     private ZendeskClient Client { get; }
 
     public WebhookList(InvocationContext invocationContext) : base(invocationContext)
@@ -398,7 +395,7 @@ public class WebhookList : BaseInvocable
         {
             var locale = data.Event.Locale;
             var id = data.Detail.Id;
-            var request = new ZendeskRequest($"/api/v2/help_center/articles/{id}", Method.Get, Creds);
+            var request = new ZendeskRequest($"/api/v2/help_center/articles/{id}", Method.Get);
             var response = await Client.ExecuteWithHandling<SingleArticle>(request);
 
             if (response.Article.SourceLocale != locale)

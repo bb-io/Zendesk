@@ -6,7 +6,7 @@ namespace Apps.Zendesk.Models.Identifiers;
 
 public class SectionIdentifier
 {
-    [Display("Section")]
+    [Display("Section ID")]
     [DataSource(typeof(SectionDataHandler))]
     public string Id { get; set; }
 }
