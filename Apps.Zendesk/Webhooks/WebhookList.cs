@@ -350,17 +350,50 @@ public class WebhookList : BaseInvocable
     }
 
     [Webhook("On article author changed", typeof(ArticleAuthorChangedHandler), Description = "On article author changed")]
-    public async Task<WebhookResponse<AuthorChangedResponse>> ArticleAuthorChangedHandler(WebhookRequest webhookRequest)
+    public async Task<WebhookResponse<AuthorChangedResponse>> ArticleAuthorChangedHandler(WebhookRequest webhookRequest, [WebhookParameter] ArticlePublishedInputParameter input)
     {
         var data = JsonConvert.DeserializeObject<ArticlePayloadTemplate<AuthorEvent>>(webhookRequest.Body.ToString());
-        if (data is null) { throw new InvalidCastException(nameof(webhookRequest.Body)); }
+        if (data is null)
+        {
+            throw new InvalidCastException(nameof(webhookRequest.Body));
+        }
+
+        if (input.BrandId != null && input.BrandId == data.Detail.BrandId)
+        {
+            return new WebhookResponse<AuthorChangedResponse>
+            {
+                HttpResponseMessage = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                Result = null
+            };
+        }
+
+        if (input.AccountId != null && input.AccountId == data.AccountId.ToString())
+        {
+            return new WebhookResponse<AuthorChangedResponse>
+            {
+                HttpResponseMessage = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                Result = null
+            };
+        }
+
+        var id = data.Detail.Id;
+        var request = new ZendeskRequest($"/api/v2/help_center/articles/{id}", Method.Get);
+        var response = await Client.ExecuteWithHandling<SingleArticle>(request);
+        var article = response.Article;
+
         return new WebhookResponse<AuthorChangedResponse>
         {
             HttpResponseMessage = null,
             Result = new AuthorChangedResponse
             {
                 ArticleId = data.Detail.Id,
-                AuthorId = data.Event.Current
+                AuthorId = article.AuthorId,
+                Title = article.Title,
+                Locale = article.SourceLocale,
+                SectionId = article.SectionId,
+                Labels = article.Labels?.ToList() ?? new List<string>()
             }
         };
     }
@@ -448,6 +481,7 @@ public class WebhookList : BaseInvocable
         };
     }
 
+
     [Webhook("On article subscription created", typeof(ArticleSubscriptionCreatedHandler), Description = "On article subscription created")]
     public async Task<WebhookResponse<ArticleSubscriptionCreatedResponse>> ArticleSubscriptionCreatedHandler(WebhookRequest webhookRequest)
     {
@@ -466,16 +500,65 @@ public class WebhookList : BaseInvocable
     }
 
     [Webhook("On article unpublished", typeof(ArticleUnpublishedHandler), Description = "On article unpublished")]
-    public async Task<WebhookResponse<ArticleResponse>> ArticleUnpublishedHandler(WebhookRequest webhookRequest)
+    public async Task<WebhookResponse<ArticlePublishedResponse>> ArticleUnpublishedHandler(WebhookRequest webhookRequest, [WebhookParameter] ArticlePublishedInputParameter input)
     {
         var data = JsonConvert.DeserializeObject<ArticlePayloadTemplate<EmptyEvent>>(webhookRequest.Body.ToString());
-        if (data is null) { throw new InvalidCastException(nameof(webhookRequest.Body)); }
-        return new WebhookResponse<ArticleResponse>
+        if (data is null)
+        {
+            throw new InvalidCastException(nameof(webhookRequest.Body));
+        }
+
+        if (input.BrandId != null && input.BrandId == data.Detail.BrandId)
+        {
+            return new WebhookResponse<ArticlePublishedResponse>
+            {
+                HttpResponseMessage = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                Result = null
+            };
+        }
+
+        if (input.AccountId != null && input.AccountId == data.AccountId.ToString())
+        {
+            return new WebhookResponse<ArticlePublishedResponse>
+            {
+                HttpResponseMessage = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                Result = null
+            };
+        }
+
+        var id = data.Detail.Id;
+        var request = new ZendeskRequest($"/api/v2/help_center/articles/{id}", Method.Get);
+        var response = await Client.ExecuteWithHandling<SingleArticle>(request);
+        var article = response.Article; 
+
+        if (input.RequiredLabel != null)
+        {
+            if (article.Labels == null || !article.Labels.Contains(input.RequiredLabel, StringComparer.OrdinalIgnoreCase))
+            {
+                return new WebhookResponse<ArticlePublishedResponse>
+                {
+                    HttpResponseMessage = null,
+                    ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                    Result = null
+                };
+            }
+        }
+
+        return new WebhookResponse<ArticlePublishedResponse>
         {
             HttpResponseMessage = null,
-            Result = new ArticleResponse
+            Result = new ArticlePublishedResponse
             {
                 ArticleId = data.Detail.Id,
+                AuthorId = article.AuthorId,   
+                Locale = article.SourceLocale,    
+                SectionId = article.SectionId,   
+                Title = article.Title,       
+                BrandId = data.Detail.BrandId,
+                AccountId = data.AccountId.ToString(),
+                Labels = article.Labels?.ToList() ?? new List<string>()
             }
         };
     }
