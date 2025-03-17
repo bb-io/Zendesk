@@ -365,8 +365,10 @@ public class WebhookList : BaseInvocable
         };
     }
 
+
     [Webhook("On article published", typeof(ArticlePublishedHandler), Description = "On article published")]
-    public async Task<WebhookResponse<ArticlePublishedResponse>> ArticlePublishedHandler(WebhookRequest webhookRequest, [WebhookParameter] ArticlePublishedInputParameter input)
+    public async Task<WebhookResponse<ArticlePublishedResponse>> ArticlePublishedHandler(WebhookRequest webhookRequest, 
+        [WebhookParameter] ArticlePublishedInputParameter input)
     {
         var data = JsonConvert.DeserializeObject<ArticlePayloadTemplate<PublishEvent>>(webhookRequest.Body.ToString());
         if (data is null) { throw new InvalidCastException(nameof(webhookRequest.Body)); }
@@ -391,23 +393,41 @@ public class WebhookList : BaseInvocable
             };
         }
 
-        if (input.OnlyIfSource != null && input.OnlyIfSource.Value)
+        SingleArticle? articleMetadata = null;
+        if ((input.OnlyIfSource != null && input.OnlyIfSource.Value) || input.RequiredLabel != null)
         {
             var locale = data.Event.Locale;
             var id = data.Detail.Id;
             var request = new ZendeskRequest($"/api/v2/help_center/articles/{id}", Method.Get);
             var response = await Client.ExecuteWithHandling<SingleArticle>(request);
+            articleMetadata = response;
 
-            if (response.Article.SourceLocale != locale)
+            if (input.OnlyIfSource != null && input.OnlyIfSource.Value)
             {
-                return new WebhookResponse<ArticlePublishedResponse>
+                if (response.Article.SourceLocale != locale)
                 {
-                    HttpResponseMessage = null,
-                    ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                    Result = null
-                };
+                    return new WebhookResponse<ArticlePublishedResponse>
+                    {
+                        HttpResponseMessage = null,
+                        ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                        Result = null
+                    };
+                }
             }
 
+            if (input.RequiredLabel != null)
+            {
+                if (response.Article.Labels == null ||
+                    !response.Article.Labels.Contains(input.RequiredLabel, StringComparer.OrdinalIgnoreCase))
+                {
+                    return new WebhookResponse<ArticlePublishedResponse>
+                    {
+                        HttpResponseMessage = null,
+                        ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                        Result = null
+                    };
+                }
+            }
         }
 
         return new WebhookResponse<ArticlePublishedResponse>
@@ -423,6 +443,7 @@ public class WebhookList : BaseInvocable
                 Title = data.Event.Title,
                 BrandId = data.Detail.BrandId,
                 AccountId = data.AccountId.ToString(),
+                Labels = articleMetadata?.Article.Labels?.ToList() ?? new List<string>()
             }
         };
     }

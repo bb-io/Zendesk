@@ -21,4 +21,7 @@ public class ArticlePublishedResponse : ArticleResponse
 
     [Display("Account ID")]
     public string AccountId { get; set; }
+
+    [Display("Labels")]
+    public IEnumerable<string> Labels { get; set; }
 }
