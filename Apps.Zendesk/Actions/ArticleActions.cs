@@ -200,6 +200,11 @@ public class ArticleActions : BaseInvocable
         [ActionParameter] FileTranslationRequest input
         )
     {
+        if (string.IsNullOrWhiteSpace(input.Locale))
+        {
+            throw new PluginMisconfigurationException("Locale value is empty. Please provide a valid locale and try again.");
+        }
+
         var fileReference = await _fileManagementClient.DownloadAsync(input.File);
         var fileBytes = await fileReference.GetByteData();
         

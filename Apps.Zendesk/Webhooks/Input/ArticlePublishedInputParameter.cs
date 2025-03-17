@@ -17,5 +17,8 @@ namespace Apps.Zendesk.Webhooks.Input
 
         [Display("Account ID")]
         public string? AccountId { get; set; }
+
+        [Display("Required Label")]
+        public string? RequiredLabel { get; set; }
     }
 }
