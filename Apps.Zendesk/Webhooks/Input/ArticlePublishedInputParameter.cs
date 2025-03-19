@@ -1,4 +1,6 @@
-﻿using Blackbird.Applications.Sdk.Common;
+﻿using Apps.Zendesk.DataSourceHandlers;
+using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.Sdk.Common.Dynamic;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,6 +21,7 @@ namespace Apps.Zendesk.Webhooks.Input
         public string? AccountId { get; set; }
 
         [Display("Required Label")]
+        [DataSource(typeof(LabelNameDataHandler))]
         public string? RequiredLabel { get; set; }
     }
 }
