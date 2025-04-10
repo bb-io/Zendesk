@@ -23,5 +23,9 @@ namespace Apps.Zendesk.Webhooks.Input
         [Display("Required Label")]
         [DataSource(typeof(LabelNameDataHandler))]
         public string? RequiredLabel { get; set; }
+
+        [Display("Language")]
+        [DataSource(typeof(LocaleDataHandler))]
+        public string? Locale { get; set; }
     }
 }

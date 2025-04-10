@@ -33,5 +33,21 @@ namespace Tests.Zendesk
             Assert.IsTrue(result.Count() > 0);
         }
 
+        [TestMethod]
+        public async Task LocaleDataHandler_works()
+        {
+            var handler = new LocaleDataHandler(InvocationContext);
+
+            var result = await handler.GetDataAsync(new DataSourceContext { }, CancellationToken.None);
+
+            Console.WriteLine($"Total: {result.Count()}");
+            foreach (var item in result)
+            {
+                Console.WriteLine($"{item.Value}: {item.Key}");
+            }
+
+            Assert.IsTrue(result.Count() > 0);
+        }
+
     }
 }

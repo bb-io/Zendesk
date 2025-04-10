@@ -426,6 +426,16 @@ public class WebhookList : BaseInvocable
             };
         }
 
+        if (input.Locale != null && input.Locale != data.Event.Locale)
+        {
+            return new WebhookResponse<ArticlePublishedResponse>
+            {
+                HttpResponseMessage = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                Result = null
+            };
+        }
+
         SingleArticle? articleMetadata = null;
         if ((input.OnlyIfSource != null && input.OnlyIfSource.Value) || input.RequiredLabel != null)
         {
