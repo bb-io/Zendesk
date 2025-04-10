@@ -13,9 +13,9 @@ namespace Tests.Zendesk
     public class DataHandlerTests :TestBase
     {
         [TestMethod]
-        public async Task LabelDataHangler_IsSucces()
+        public async Task LabelNameDataHangler_IsSucces()
         {
-            var handler = new LabelDataHandler(InvocationContext);
+            var handler = new LabelNameDataHandler(InvocationContext);
 
             var result = await handler.GetDataAsync(new DataSourceContext(), CancellationToken.None);
 
