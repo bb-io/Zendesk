@@ -97,6 +97,12 @@ public class ZendeskClient : RestClient
                 ? "Authentication failed due to a conflict with an existing user ID"
                 : $"Error: {errorResponse.Error}";
         }
+        else if (response.StatusCode == HttpStatusCode.InternalServerError)
+        {
+            exceptionMessage = errorResponse.Error == "InternalServerError"
+                ? "Error happened on Zenbdesk server. Please check you input and try again"
+                : $"Error: {errorResponse.Error}";
+        }
         else
         {
             exceptionMessage = $"{errorResponse.Error}: {errorResponse.Description} ({response.StatusCode})";
