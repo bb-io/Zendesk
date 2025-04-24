@@ -436,6 +436,16 @@ public class WebhookList : BaseInvocable
             };
         }
 
+        if (input.ArticleId != null && input.ArticleId != data.Detail.Id)
+        {
+            return new WebhookResponse<ArticlePublishedResponse>
+            {
+                HttpResponseMessage = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                Result = null
+            };
+        }
+
         SingleArticle? articleMetadata = null;
         if ((input.OnlyIfSource != null && input.OnlyIfSource.Value) || input.RequiredLabel != null)
         {

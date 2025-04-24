@@ -27,5 +27,9 @@ namespace Apps.Zendesk.Webhooks.Input
         [Display("Language")]
         [DataSource(typeof(LocaleDataHandler))]
         public string? Locale { get; set; }
+
+        [Display("Article ID")]
+        [DataSource(typeof(ArticleDataHandler))]
+        public string? ArticleId { get; set; }
     }
 }
