@@ -378,6 +378,16 @@ public class WebhookList : BaseInvocable
             };
         }
 
+         if (input.ArticleId != null && input.ArticleId != data.Detail.Id)
+        {
+            return new WebhookResponse<AuthorChangedResponse>
+            {
+                HttpResponseMessage = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                Result = null
+            };
+        }
+
         var id = data.Detail.Id;
         var request = new ZendeskRequest($"/api/v2/help_center/articles/{id}", Method.Get);
         var response = await Client.ExecuteWithHandling<SingleArticle>(request);
@@ -427,6 +437,16 @@ public class WebhookList : BaseInvocable
         }
 
         if (input.Locale != null && input.Locale != data.Event.Locale)
+        {
+            return new WebhookResponse<ArticlePublishedResponse>
+            {
+                HttpResponseMessage = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                Result = null
+            };
+        }
+
+        if (input.ArticleId != null && input.ArticleId != data.Detail.Id)
         {
             return new WebhookResponse<ArticlePublishedResponse>
             {
@@ -529,6 +549,16 @@ public class WebhookList : BaseInvocable
         }
 
         if (input.AccountId != null && input.AccountId == data.AccountId.ToString())
+        {
+            return new WebhookResponse<ArticlePublishedResponse>
+            {
+                HttpResponseMessage = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                Result = null
+            };
+        }
+
+        if (input.ArticleId != null && input.ArticleId != data.Detail.Id)
         {
             return new WebhookResponse<ArticlePublishedResponse>
             {
