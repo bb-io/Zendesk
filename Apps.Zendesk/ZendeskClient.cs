@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Text;
 using Apps.Zendesk.Models.Responses;
 using Apps.Zendesk.Models.Responses.Error;
 using Blackbird.Applications.Sdk.Common.Authentication;
@@ -70,6 +71,16 @@ public class ZendeskClient : RestClient
         catch (Exception ex)
         {
             throw new PluginApplicationException("Error:", ex);
+        }
+
+        var content = response.RawBytes != null
+               ? Encoding.UTF8.GetString(response.RawBytes)
+               : response.Content ?? string.Empty;
+
+        if (response.ContentType?.Contains("html", StringComparison.OrdinalIgnoreCase) == true
+                || content.TrimStart().StartsWith("<"))
+        {
+            throw new PluginApplicationException($"Expected JSON but received HTML:\n{content}");
         }
 
         if (response.IsSuccessStatusCode)
