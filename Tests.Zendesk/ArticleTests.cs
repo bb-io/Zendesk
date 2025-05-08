@@ -20,7 +20,7 @@ namespace Tests.Zendesk
         public const string TestSectionId = "32193681530257";
         public const string DefaultLocale = "en-us";
         public const string OtherLocale = "nl";
-        public const string NewLocale = "de";
+        public const string NewLocale = "fr";
 
         [TestMethod]
         public async Task Search_articles_works()
@@ -107,6 +107,17 @@ namespace Tests.Zendesk
             Console.WriteLine(JsonConvert.SerializeObject(uploadResult, Formatting.Indented));
 
             Assert.IsTrue(result.File.Name.Contains(uploadResult.Title));
+        }
+
+        [TestMethod]
+        public async Task Add_label_works()
+        {
+            var actions = new ArticleActions(InvocationContext, FileManager);
+            await actions.AddArticleLabel(new ArticleIdentifier { Id = TestArticleId }, new LocaleIdentifier { Locale = DefaultLocale }, "test");
+            var result = await actions.GetArticle(new ArticleIdentifier { Id = TestArticleId });
+            Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
+
+            Assert.IsNotNull(result.Labels.Contains("test"));
         }
 
     }
