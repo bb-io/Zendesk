@@ -1,7 +1,6 @@
 ﻿using Apps.Zendesk.Models.Responses;
 using Apps.Zendesk.Models.Responses.Wrappers;
 using Blackbird.Applications.Sdk.Common;
-using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using RestSharp;
@@ -19,12 +18,12 @@ public class ArticleDataHandler : BaseInvocable, IAsyncDataSourceItemHandler
         if (string.IsNullOrEmpty(context.SearchString))
         {
             var request = new ZendeskRequest("/api/v2/help_center/articles", Method.Get);
-            articles = (await client.ExecuteWithHandling<MultipleArticles>(request)).Articles;
+            articles = (await client.ExecuteWithRetries<MultipleArticles>(request)).Articles;
         } else
         {
             var request = new ZendeskRequest("/api/v2/help_center/articles/search", Method.Get);
             request.AddQueryParameter("query", context.SearchString);
-            articles = (await client.ExecuteWithHandling<SearchResponse<Article>>(request)).Results;
+            articles = (await client.ExecuteWithRetries<SearchResponse<Article>>(request)).Results;
         }
 
         return articles

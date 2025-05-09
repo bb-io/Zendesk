@@ -1,18 +1,13 @@
 using Apps.Zendesk.Models.Responses;
 using Blackbird.Applications.Sdk.Common;
-using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using RestSharp;
 
 namespace Apps.Zendesk.DataSourceHandlers;
 
-public class LabelNameDataHandler : BaseInvocable, IAsyncDataSourceHandler
+public class LabelNameDataHandler(InvocationContext invocationContext) : BaseInvocable(invocationContext), IAsyncDataSourceHandler
 {
-    public LabelNameDataHandler(InvocationContext invocationContext) : base(invocationContext)
-    {
-    }
-
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
         CancellationToken cancellationToken)
     {

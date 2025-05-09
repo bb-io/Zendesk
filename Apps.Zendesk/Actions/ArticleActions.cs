@@ -218,7 +218,7 @@ public class ArticleActions : BaseInvocable
         var request =
             ZendeskRequest.CreateTranslationUpsertRequest(isLocaleMissing, $"articles/{articleId}", input.Locale);
         request.AddNewtonJson(converted);
-        var response = await Client.ExecuteWithHandling<SingleTranslation>(request);
+        var response = await Client.ExecuteWithRetries<SingleTranslation>(request);
         return response.Translation;
     }
 
@@ -231,7 +231,7 @@ public class ArticleActions : BaseInvocable
     }
 
     [Action("Delete label from article", Description = "Delete a label from an article")]
-    public async Task DeleteArticleLabel([ActionParameter] ArticleIdentifier article, [ActionParameter] LocaleIdentifier locale, [ActionParameter][Display("Label")][DataSource(typeof(LabelDataHandler))] string labelId)
+    public async Task DeleteArticleLabel([ActionParameter] ArticleIdentifier article, [ActionParameter] LocaleIdentifier locale, [ActionParameter, Display("Label ID"), DataSource(typeof(LabelDataHandler))] string labelId)
     {
         var request = new ZendeskRequest($"/api/v2/help_center/{locale.Locale}/articles/{article.Id}/labels/{labelId}", Method.Delete);
         await Client.ExecuteWithHandling(request);
