@@ -60,6 +60,44 @@ public class ZendeskClient : RestClient
         return results;
     }
 
+    public async Task<T> ExecuteWithRetries<T>(ZendeskRequest request, int retryCount = 3)
+    {
+        var response = await ExecuteWithRetries(request, retryCount);
+        return JsonConvert.DeserializeObject<T>(response.Content!)!;
+    }
+
+    public async Task<RestResponse> ExecuteWithRetries(RestRequest request, int retryCount = 3)
+    {
+        var attempt = 0;
+        var latestErrorMessage = string.Empty;
+
+        while (attempt < retryCount)
+        {
+            attempt++;
+            try
+            {
+                var response = await ExecuteWithHandling(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    return response;
+                }
+
+                latestErrorMessage = response.Content;
+            }
+            catch (PluginApplicationException ex)
+            {
+                latestErrorMessage = ex.Message;
+
+                if (attempt >= retryCount)
+                    throw;
+            }
+
+            await Task.Delay(5000 * attempt);
+        }
+
+        throw new PluginApplicationException($"Request failed after {retryCount} attempts. With the latest error: {latestErrorMessage}");
+    }
+
     public async Task<RestResponse> ExecuteWithHandling(RestRequest request)
     {
         RestResponse response;
@@ -86,7 +124,6 @@ public class ZendeskClient : RestClient
         if (response.IsSuccessStatusCode)
             return response;
 
-
         var errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(response.Content);
 
         if (errorResponse?.Error == null)
@@ -105,8 +142,8 @@ public class ZendeskClient : RestClient
         else if (response.StatusCode == HttpStatusCode.Conflict)
         {
             exceptionMessage = errorResponse.Error == "Conflict"
-                ? "Authentication failed due to a conflict with an existing user ID"
-                : $"Error: {errorResponse.Error}";
+                ? "API response indicates a conflict with the resource you're trying to create or update. This error typically occur when two or more requests try to create or change the same resource simultaneously."
+                : $"errorResponse.Error";
         }
         else if (response.StatusCode == HttpStatusCode.InternalServerError)
         {

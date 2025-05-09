@@ -218,7 +218,7 @@ public class ArticleActions : BaseInvocable
         var request =
             ZendeskRequest.CreateTranslationUpsertRequest(isLocaleMissing, $"articles/{articleId}", input.Locale);
         request.AddNewtonJson(converted);
-        var response = await Client.ExecuteWithHandling<SingleTranslation>(request);
+        var response = await Client.ExecuteWithRetries<SingleTranslation>(request);
         return response.Translation;
     }
 
