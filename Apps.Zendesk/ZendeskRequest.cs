@@ -4,12 +4,8 @@ using RestSharp;
 
 namespace Apps.Zendesk;
 
-public class ZendeskRequest : RestRequest
+public class ZendeskRequest(string endpoint, Method method) : RestRequest(endpoint, method)
 {
-    public ZendeskRequest(string endpoint, Method method) : base(endpoint, method)
-    {
-    }
-
     public void AddNewtonJson(object obj)
     {
         var json = JsonConvert.SerializeObject(obj, Formatting.Indented, new JsonSerializerSettings

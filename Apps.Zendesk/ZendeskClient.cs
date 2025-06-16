@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text;
+using Apps.Zendesk.Constants;
 using Apps.Zendesk.Models.Responses;
 using Apps.Zendesk.Models.Responses.Error;
 using Blackbird.Applications.Sdk.Common.Authentication;
@@ -13,18 +14,19 @@ namespace Apps.Zendesk;
 public class ZendeskClient : RestClient
 {
     private InvocationContext Context { get; }
+    
     public ZendeskClient(InvocationContext invocationContext) :
         base(new RestClientOptions()
-            { ThrowOnAnyError = false, BaseUrl = GetUri(invocationContext.AuthenticationCredentialsProviders) })
+        { ThrowOnAnyError = false, BaseUrl = GetUri(invocationContext.AuthenticationCredentialsProviders) })
     {
         Context = invocationContext;
-        this.AddDefaultHeader("Authorization", invocationContext.AuthenticationCredentialsProviders.First(p => p.KeyName == "Authorization").Value);
+        this.AddDefaultHeader("Authorization", invocationContext.AuthenticationCredentialsProviders.First(p => p.KeyName == CredNames.AccessToken).Value);
         this.AddDefaultHeader("accept", "*/*");
     }
 
     private static Uri GetUri(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders)
     {
-        var url = authenticationCredentialsProviders.First(p => p.KeyName == "api_endpoint").Value;
+        var url = authenticationCredentialsProviders.First(p => p.KeyName == CredNames.BaseUrl).Value;
         return new Uri(url);
     }
 
