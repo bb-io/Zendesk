@@ -46,16 +46,37 @@ public class ZendeskClient : RestClient
 
     public async Task<List<T>> GetPaginatedResults<T>(ZendeskRequest request)
     {
-        request.AddQueryParameter("per_page", 100);
+        const int pageSize = 100;
+        request.AddQueryParameter("per_page", pageSize);
+        
         var results = new List<T>();
-        string? next_page;
+        string? nextPage = null;
+        long totalItems = 0;
+        bool firstRequest = true;
+        
         do
         {
+            if (!firstRequest && nextPage != null)
+            {
+                request = new ZendeskRequest(nextPage, Method.Get);
+            }
+            
             var response = await ExecuteWithHandling<PaginatedResultResponse<T>>(request);
-
-            next_page = response.Next;
+            
+            if (firstRequest)
+            {
+                totalItems = response.TotalCount;
+                firstRequest = false;
+            }
+            
             results.AddRange(response.Results);
-        } while (next_page != null);
+            nextPage = response.Next;
+            
+            if (results.Count >= totalItems || response.Results.Count == 0)
+            {
+                break;
+            }
+        } while (nextPage != null);
 
         return results;
     }
