@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text;
+using Apps.Zendesk.Constants;
 using Apps.Zendesk.Models.Responses;
 using Apps.Zendesk.Models.Responses.Error;
 using Blackbird.Applications.Sdk.Common.Authentication;
@@ -13,18 +14,19 @@ namespace Apps.Zendesk;
 public class ZendeskClient : RestClient
 {
     private InvocationContext Context { get; }
+    
     public ZendeskClient(InvocationContext invocationContext) :
         base(new RestClientOptions()
-            { ThrowOnAnyError = false, BaseUrl = GetUri(invocationContext.AuthenticationCredentialsProviders) })
+        { ThrowOnAnyError = false, BaseUrl = GetUri(invocationContext.AuthenticationCredentialsProviders) })
     {
         Context = invocationContext;
-        this.AddDefaultHeader("Authorization", invocationContext.AuthenticationCredentialsProviders.First(p => p.KeyName == "Authorization").Value);
+        this.AddDefaultHeader("Authorization", invocationContext.AuthenticationCredentialsProviders.First(p => p.KeyName == CredNames.AccessToken).Value);
         this.AddDefaultHeader("accept", "*/*");
     }
 
     private static Uri GetUri(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders)
     {
-        var url = authenticationCredentialsProviders.First(p => p.KeyName == "api_endpoint").Value;
+        var url = authenticationCredentialsProviders.First(p => p.KeyName == CredNames.BaseUrl).Value;
         return new Uri(url);
     }
 
@@ -46,16 +48,37 @@ public class ZendeskClient : RestClient
 
     public async Task<List<T>> GetPaginatedResults<T>(ZendeskRequest request)
     {
-        request.AddQueryParameter("per_page", 100);
+        const int pageSize = 100;
+        request.AddQueryParameter("per_page", pageSize);
+        
         var results = new List<T>();
-        string? next_page;
+        string? nextPage = null;
+        long totalItems = 0;
+        bool firstRequest = true;
+        
         do
         {
+            if (!firstRequest && nextPage != null)
+            {
+                request = new ZendeskRequest(nextPage, Method.Get);
+            }
+            
             var response = await ExecuteWithHandling<PaginatedResultResponse<T>>(request);
-
-            next_page = response.Next;
+            
+            if (firstRequest)
+            {
+                totalItems = response.TotalCount;
+                firstRequest = false;
+            }
+            
             results.AddRange(response.Results);
-        } while (next_page != null);
+            nextPage = response.Next;
+            
+            if (results.Count >= totalItems || response.Results.Count == 0)
+            {
+                break;
+            }
+        } while (nextPage != null);
 
         return results;
     }
