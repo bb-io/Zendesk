@@ -14,7 +14,7 @@ namespace Apps.Zendesk;
 public class ZendeskClient : RestClient
 {
     private InvocationContext Context { get; }
-    
+
     public ZendeskClient(InvocationContext invocationContext) :
         base(new RestClientOptions()
         { ThrowOnAnyError = false, BaseUrl = GetUri(invocationContext.AuthenticationCredentialsProviders) })
@@ -50,30 +50,30 @@ public class ZendeskClient : RestClient
     {
         const int pageSize = 100;
         request.AddQueryParameter("per_page", pageSize);
-        
+
         var results = new List<T>();
         string? nextPage = null;
         long totalItems = 0;
         bool firstRequest = true;
-        
+
         do
         {
             if (!firstRequest && nextPage != null)
             {
                 request = new ZendeskRequest(nextPage, Method.Get);
             }
-            
+
             var response = await ExecuteWithHandling<PaginatedResultResponse<T>>(request);
-            
+
             if (firstRequest)
             {
                 totalItems = response.TotalCount;
                 firstRequest = false;
             }
-            
+
             results.AddRange(response.Results);
             nextPage = response.Next;
-            
+
             if (results.Count >= totalItems || response.Results.Count == 0)
             {
                 break;
@@ -86,7 +86,16 @@ public class ZendeskClient : RestClient
     public async Task<T> ExecuteWithRetries<T>(ZendeskRequest request, int retryCount = 3)
     {
         var response = await ExecuteWithRetries(request, retryCount);
-        return JsonConvert.DeserializeObject<T>(response.Content!)!;
+
+        try
+        {
+            return JsonConvert.DeserializeObject<T>(response.Content!)!;
+        }
+        catch (JsonException ex)
+        {
+            Context.Logger?.LogError($"[ZendeskClient] Failed to deserialize response: {ex.Message}. Response content: {response.Content}", []);
+            throw new PluginApplicationException($"Failed to deserialize response: {ex.Message}. Ask blackbird support to check the response content: {response.Content}", ex);
+        }
     }
 
     public async Task<RestResponse> ExecuteWithRetries(RestRequest request, int retryCount = 3)
@@ -145,9 +154,20 @@ public class ZendeskClient : RestClient
         }
 
         if (response.IsSuccessStatusCode)
+        {
             return response;
+        }
 
-        var errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(response.Content);
+        ErrorResponse? errorResponse = null;
+        try
+        {
+            errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(response.Content!);
+        }
+        catch (JsonException)
+        {
+            Context.Logger?.LogError($"[ZendeskClient] Failed to parse error response ({response.StatusCode}): {response.Content}", []);
+            throw new PluginApplicationException($"Failed to parse error response ({response.StatusCode}): {response.Content}");
+        }
 
         if (errorResponse?.Error == null)
         {
@@ -171,7 +191,7 @@ public class ZendeskClient : RestClient
         else if (response.StatusCode == HttpStatusCode.InternalServerError)
         {
             exceptionMessage = errorResponse.Error == "InternalServerError"
-                ? "Error happened on Zenbdesk server. Please check you input and try again"
+                ? "Error happened on Zenbdesk server. Please, add retry policy to this action."
                 : $"Error: {errorResponse.Error}";
         }
         else
