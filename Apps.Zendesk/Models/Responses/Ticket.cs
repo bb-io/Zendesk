@@ -6,7 +6,7 @@ namespace Apps.Zendesk.Models.Responses;
 public class Ticket
 {
     [JsonProperty("id")]
-    [Display("ID")]
+    [Display("Ticket ID")]
     public string Id { get; set; }
 
     [JsonProperty("assignee_id")]
