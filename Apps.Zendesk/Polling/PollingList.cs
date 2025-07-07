@@ -73,4 +73,58 @@ public class PollingList : BaseInvocable
             }
         };
     }
+
+    [PollingEvent("On new tickets added", "On any new tickets are added")]
+    public async Task<PollingEventResponse<DateMemory, ListTicketsResponse>> OnTicketsAddedToArticles(
+       PollingEventRequest<DateMemory> request)
+    {
+        var allTickets = new List<Ticket>();
+        string? next = "/api/v2/tickets?per_page=100";
+
+        do
+        {
+            var page = await Client.ExecuteWithHandling<MultipleTickets>(
+                new ZendeskRequest(next, Method.Get));
+            allTickets.AddRange(page.Tickets);
+            next = page.NextPage;
+        }
+        while (!string.IsNullOrEmpty(next));
+
+
+        if (request.Memory == null)
+        {
+            var initial = allTickets.Any()
+                ? allTickets.Max(t => t.CreatedAt)
+                : DateTime.UtcNow;
+
+            return new PollingEventResponse<DateMemory, ListTicketsResponse>
+            {
+                FlyBird = false,
+                Memory = new DateMemory { LastInteractionDate = initial }
+            };
+        }
+
+        var newTickets = allTickets
+       .Where(t => t.CreatedAt > request.Memory.LastInteractionDate)
+       .ToList();
+
+        if (!newTickets.Any())
+        {
+            return new PollingEventResponse<DateMemory, ListTicketsResponse>
+            {
+                FlyBird = false,
+                Memory = request.Memory
+            };
+        }
+
+        var newest = newTickets.Max(t => t.CreatedAt);
+        request.Memory.LastInteractionDate = newest;
+
+        return new PollingEventResponse<DateMemory, ListTicketsResponse>
+        {
+            FlyBird = true,
+            Memory = request.Memory,
+            Result = new ListTicketsResponse { Tickets = newTickets }
+        };
+    }
 }

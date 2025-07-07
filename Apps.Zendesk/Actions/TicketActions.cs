@@ -20,6 +20,49 @@ public class TicketActions : BaseInvocable
         Client = new ZendeskClient(invocationContext);
     }
 
+    [Action("Search tickets", Description = "Search tickets")]
+    public async Task<ListTicketsResponse> SearchTickets([ActionParameter] SearchTicketsRequest input)
+    {
+        bool useSearchApi =
+         !string.IsNullOrWhiteSpace(input.Status) ||
+         !string.IsNullOrWhiteSpace(input.Priority);
+
+        List<Ticket> tickets;
+
+        if (useSearchApi)
+        {
+            var terms = new List<string> { "type:ticket" };
+            if (!string.IsNullOrWhiteSpace(input.Status))
+                terms.Add($"status:{input.Status}");
+            if (!string.IsNullOrWhiteSpace(input.Priority))
+                terms.Add($"priority:{input.Priority}");
+
+            var request = new ZendeskRequest($"/api/v2/search", Method.Get);
+            request.AddQueryParameter("query", string.Join(" ", terms));
+
+            tickets = await Client.GetPaginatedResults<Ticket>(request);
+        }
+        else
+        {
+            var all = new List<Ticket>();
+            string? next = "/api/v2/tickets?per_page=100";
+
+            do
+            {
+                var page = await Client.ExecuteWithHandling<MultipleTickets>(
+                    new ZendeskRequest(next, Method.Get));
+                all.AddRange(page.Tickets);
+                next = page.NextPage;
+            }
+            while (!string.IsNullOrEmpty(next));
+
+            tickets = all;
+        }
+
+        return new ListTicketsResponse { Tickets = tickets };
+    }
+
+
     [Action("Get ticket", Description = "Get a specific ticket")]
     public async Task<Ticket> GetTicket([ActionParameter] TicketIdentifier ticket)
     {
