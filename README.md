@@ -42,7 +42,7 @@ Before you can connect you need to make sure that:
 - **Add label to article** on a professional or enterprise plan, it adds a label to an article.
 - **Delete label from article** on a professional or enterprise plan, it deletes a label from an article.
 
-![HTML articles](image/README/1692613846802.png)
+![1751975102552](image/README/1751975102552.png)
 
 ### Categories
 
