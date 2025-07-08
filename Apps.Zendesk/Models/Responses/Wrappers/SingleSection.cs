@@ -2,5 +2,5 @@
 
 public class SingleSection
 {
-    public Section Section { get; set; }
+    public SectionWithMissingLocales Section { get; set; }
 }

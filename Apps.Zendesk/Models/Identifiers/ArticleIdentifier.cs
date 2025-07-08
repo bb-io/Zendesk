@@ -8,5 +8,5 @@ public class ArticleIdentifier
 {
     [Display("Article ID")]
     [DataSource(typeof(ArticleDataHandler))]
-    public string Id { get; set; }
+    public string ContentId { get; set; }
 }

@@ -16,10 +16,14 @@ using Blackbird.Applications.Sdk.Common.Dynamic;
 using Apps.Zendesk.DataSourceHandlers;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Files;
+using Blackbird.Applications.SDK.Blueprints;
+using Apps.Zendesk.Models.Blueprints;
+using Blackbird.Filters.Transformations;
+using Blackbird.Filters.Xliff.Xliff2;
 
 namespace Apps.Zendesk.Actions;
 
-[ActionList]
+[ActionList("Articles")]
 public class ArticleActions : BaseInvocable
 {
     private readonly IFileManagementClient _fileManagementClient;
@@ -64,10 +68,14 @@ public class ArticleActions : BaseInvocable
     }
 
     [Action("Get article metadata", Description = "Get metadata information of a specific article")]
-    public async Task<Article> GetArticle([ActionParameter] ArticleIdentifier article)
+    public async Task<ArticleWithMissingLocales> GetArticle([ActionParameter] ArticleIdentifier article)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}", Method.Get);
+        var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.ContentId}", Method.Get);
         var response = await Client.ExecuteWithHandling<SingleArticle>(request);
+
+        var missingLocales = await GetArticleMissingTranslations(article);
+        response.Article.MissingLocales = missingLocales.Locales;
+
         return response.Article;
     }
 
@@ -86,11 +94,11 @@ public class ArticleActions : BaseInvocable
         return response.Article;
     }
 
-    [Action("Update article metadata", Description = "Update an article. This action does not update translation properties such as the article's title, body, locale, or draft. Use 'Upload article content'")]
+    [Action("Update article metadata", Description = "Update an article. This action does not update translation properties such as the article's title, body, locale, or draft. Use 'Upload article'")]
     public async Task<Article> UpdateArticle([ActionParameter] ArticleIdentifier article,
         [ActionParameter] UpdateArticleRequest input)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}", Method.Put);
+        var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.ContentId}", Method.Put);
         request.AddNewtonJson(new { article = input });
         var response = await Client.ExecuteWithHandling<SingleArticle>(request);
         return response.Article;
@@ -99,13 +107,13 @@ public class ArticleActions : BaseInvocable
     [Action("Archive article", Description = "Archive an article")]
     public async Task DeleteArticle([ActionParameter] ArticleIdentifier article)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}", Method.Delete);
+        var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.ContentId}", Method.Delete);
         await Client.ExecuteWithHandling(request);
     }
 
     public async Task<Translation?> GetArticleTranslation([ActionParameter] ArticleIdentifier article, [ActionParameter] LocaleIdentifier locale)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}/translations/{locale.Locale}", Method.Get);
+        var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.ContentId}/translations/{locale.Locale}", Method.Get);
         var response = await Client.ExecuteAsync<SingleTranslation>(request);
         return response.Data?.Translation;
     }
@@ -115,28 +123,27 @@ public class ArticleActions : BaseInvocable
         var translation = await GetArticleTranslation(article, locale);
         if (translation != null)
         {
-            var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}/translations/{locale.Locale}", Method.Delete);
+            var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.ContentId}/translations/{locale.Locale}", Method.Delete);
             await Client.ExecuteWithHandling(request);
         }
     }
 
-    [Action("Search article missing locales", Description = "Returns the locales that are missing for this article")]
     public async Task<MissingLocales> GetArticleMissingTranslations([ActionParameter] ArticleIdentifier article)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}/translations/missing", Method.Get);
+        var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.ContentId}/translations/missing", Method.Get);
         return await Client.ExecuteWithHandling<MissingLocales>(request);
     }
 
     [Action("Add image to article content", Description = "Add an image at the bottom of an article")]
     public async Task<Translation> AddImageToArticle([ActionParameter] ArticleIdentifier article, [ActionParameter] LocaleIdentifier locale, [ActionParameter] ImageRequest input)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}/translations/{locale.Locale}", Method.Get);
+        var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.ContentId}/translations/{locale.Locale}", Method.Get);
         var response = await Client.ExecuteWithHandling<SingleTranslation>(request);
 
         using var fileStream = await _fileManagementClient.DownloadAsync(input.File);
         var fileAttachment = await fileStream.GetByteData();
 
-        var uploadRequest = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}/attachments", Method.Post);
+        var uploadRequest = new ZendeskRequest($"/api/v2/help_center/articles/{article.ContentId}/attachments", Method.Post);
         uploadRequest.AddFile("file", fileAttachment, input.File.Name);
         uploadRequest.AddParameter("inline", "true");
 
@@ -151,20 +158,28 @@ public class ArticleActions : BaseInvocable
     {
         var missingLocales = await GetArticleMissingTranslations(article);
         var isLocaleMissing = missingLocales.Locales.Contains(input.Locale);
-        var request = ZendeskRequest.CreateTranslationUpsertRequest(isLocaleMissing, $"articles/{article.Id}", input.Locale);
+        var request = ZendeskRequest.CreateTranslationUpsertRequest(isLocaleMissing, $"articles/{article.ContentId}", input.Locale);
         request.AddNewtonJson(input.Convert(isLocaleMissing));
         var response = await Client.ExecuteWithHandling<SingleTranslation>(request);
         return response.Translation;
     }
 
-    [Action("Download article content", Description = "Get the translatable content of an article as a file")]
-    public async Task<FileResponse> GetArticleAsFile([ActionParameter] ArticleIdentifier article, [ActionParameter] LocaleIdentifier locale)
+    [BlueprintActionDefinition(BlueprintAction.DownloadContent)]
+    [Action("Download article", Description = "Get the translatable content of an article as a file")]
+    public async Task<FileResponse> GetArticleAsFile([ActionParameter] DownloadContentInput input)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.Id}/translations/{locale.Locale}", Method.Get);
+        if (string.IsNullOrEmpty(input.Locale))
+        {
+            var articleMetaRequest = new ZendeskRequest($"/api/v2/help_center/articles/{input.ContentId}", Method.Get);
+            var articleMetaResponse = await Client.ExecuteWithHandling<SingleArticle>(articleMetaRequest);
+            input.Locale = articleMetaResponse.Article.SourceLocale;
+        }
+
+        var request = new ZendeskRequest($"/api/v2/help_center/articles/{input.ContentId}/translations/{input.Locale}", Method.Get);
         var response = await Client.ExecuteWithHandling<SingleTranslation>(request);
 
         string htmlFile =
-            $"<html><head><title>{response.Translation.Title}</title><meta name=\"{Constants.Constants.BlackbirdReferenceId}\" content=\"{article.Id}\"></head><body>{response.Translation.Body}</body></html>";
+            $"<html><head><title>{response.Translation.Title}</title><meta name=\"{Constants.Constants.BlackbirdReferenceId}\" content=\"{input.ContentId}\"></head><body>{response.Translation.Body}</body></html>";
 
         var invalidChars = new List<char>();
         invalidChars.AddRange(Path.GetInvalidFileNameChars());
@@ -174,19 +189,17 @@ public class ArticleActions : BaseInvocable
 
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(htmlFile));
         var file = await _fileManagementClient.UploadAsync(stream, MediaTypeNames.Text.Html, $"{filename}.html");
-        return new FileResponse { File = file };
+        return new FileResponse { Content = file };
     }
 
 
     [Action("Get article ID from content file", Description = "Return the article ID embedded in the content file")]
-    public async Task<ArticleIdResponse> GetArticleIdFromHtmlFile([ActionParameter] FileRequest file)
+    public async Task<ArticleIdResponse> GetArticleIdFromHtmlFile([ActionParameter] FileRequest input)
     {
-        using var stream = await _fileManagementClient.DownloadAsync(file.File);
-        using var ms = new MemoryStream();
-        await stream.CopyToAsync(ms);
-        var fileBytes = ms.ToArray();
+        var file = await _fileManagementClient.DownloadAsync(input.File);
+        var html = Encoding.UTF8.GetString(await file.GetByteData());
 
-        var referenceId = FileTranslationRequest.ExtractBlackbirdId(fileBytes);
+        var referenceId = FileTranslationRequest.ExtractBlackbirdId(html);
 
         if (string.IsNullOrWhiteSpace(referenceId))
             throw new PluginMisconfigurationException("No ID was found in metadata.");
@@ -194,29 +207,32 @@ public class ArticleActions : BaseInvocable
         return new ArticleIdResponse { ArticleId = referenceId };
     }
 
-    [Action("Upload article content", Description ="Updates the translation for an article, creates a new translation if there is none. Takes a translated file (HTML) as input.")]
-    public async Task<Translation> TranslateArticleFromFile(
-        [ActionParameter] ArticleOptimalIdentifier article,
-        [ActionParameter] FileTranslationRequest input
-        )
+    [BlueprintActionDefinition(BlueprintAction.UploadContent)]
+    [Action("Upload article", Description ="Updates the translation for an article, creates a new translation if there is none. Takes a translated file (HTML) as input.")]
+    public async Task<Translation> TranslateArticleFromFile([ActionParameter] FileTranslationRequest input)
     {
         if (string.IsNullOrWhiteSpace(input.Locale))
         {
             throw new PluginMisconfigurationException("Locale value is empty. Please provide a valid locale and try again.");
         }
 
-        var fileReference = await _fileManagementClient.DownloadAsync(input.File);
-        var fileBytes = await fileReference.GetByteData();
-        
-        var articleId = article.Id ?? FileTranslationRequest.ExtractBlackbirdId(fileBytes) ?? throw new PluginMisconfigurationException("Blackbird reference ID not found in the HTML file and no article ID provided. Did you use a content file downloaded through Blackbird?");
-        var articleRequest = new ArticleIdentifier { Id = articleId };
+        var file = await _fileManagementClient.DownloadAsync(input.Content);
+        var html = Encoding.UTF8.GetString(await file.GetByteData());
+
+        if (Xliff2Serializer.IsXliff2(html))
+        {
+            html = Transformation.Parse(html, input.Content.Name).Target().Serialize();
+            if (html == null) throw new PluginMisconfigurationException("XLIFF did not contain any files");
+        }
+
+        var articleId = input.ContentId ?? FileTranslationRequest.ExtractBlackbirdId(html) ?? throw new PluginMisconfigurationException("Blackbird reference ID not found in the file and no article ID provided. Did you use a content file downloaded through Blackbird?");
+        var articleRequest = new ArticleIdentifier { ContentId = articleId };
         
         var missingLocales = await GetArticleMissingTranslations(articleRequest);
         var isLocaleMissing = missingLocales.Locales.Contains(input.Locale);
-        var converted = input.Convert(fileBytes, isLocaleMissing);
+        var converted = input.Convert(html, isLocaleMissing);
 
-        var request =
-            ZendeskRequest.CreateTranslationUpsertRequest(isLocaleMissing, $"articles/{articleId}", input.Locale);
+        var request = ZendeskRequest.CreateTranslationUpsertRequest(isLocaleMissing, $"articles/{articleId}", input.Locale);
         request.AddNewtonJson(converted);
         var response = await Client.ExecuteWithRetries<SingleTranslation>(request);
         return response.Translation;
@@ -225,7 +241,7 @@ public class ArticleActions : BaseInvocable
     [Action("Add label to article", Description = "Add a new label to an article")]
     public async Task AddArticleLabel([ActionParameter] ArticleIdentifier article, [ActionParameter] LocaleIdentifier locale, [ActionParameter][Display("Name")] string name)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/{locale.Locale}/articles/{article.Id}/labels", Method.Post);
+        var request = new ZendeskRequest($"/api/v2/help_center/{locale.Locale}/articles/{article.ContentId}/labels", Method.Post);
         request.AddJsonBody(new { label = new { name = name } });
         await Client.ExecuteWithHandling(request);
     }
@@ -233,7 +249,7 @@ public class ArticleActions : BaseInvocable
     [Action("Delete label from article", Description = "Delete a label from an article")]
     public async Task DeleteArticleLabel([ActionParameter] ArticleIdentifier article, [ActionParameter] LocaleIdentifier locale, [ActionParameter, Display("Label ID"), DataSource(typeof(LabelDataHandler))] string labelId)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/{locale.Locale}/articles/{article.Id}/labels/{labelId}", Method.Delete);
+        var request = new ZendeskRequest($"/api/v2/help_center/{locale.Locale}/articles/{article.ContentId}/labels/{labelId}", Method.Delete);
         await Client.ExecuteWithHandling(request);
     }
 }

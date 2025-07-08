@@ -5,7 +5,7 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.Zendesk.Actions;
 
-[ActionList]
+[ActionList("Debug")]
 public class DebugActions(InvocationContext invocationContext) : BaseInvocable(invocationContext)
 {
     [Action("Debug", Description = "Debug the application")]

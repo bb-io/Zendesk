@@ -1,13 +1,14 @@
 ﻿using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.SDK.Blueprints.Interfaces.CMS;
 using Newtonsoft.Json;
 
 namespace Apps.Zendesk.Models.Responses;
 
-public class Article
+public class Article : IDownloadContentInput
 {
     [Display("Article ID")]
     [JsonProperty("id")]
-    public string Id { get; set; }
+    public string ContentId { get; set; }
 
     [Display("Public URL")]
     [JsonProperty("html_url")]

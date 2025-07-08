@@ -4,15 +4,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Product>Zendesk</Product>
-    <Version>1.1.16</Version>
+    <Version>1.2.0</Version>
     <Description>Zendesk makes customer service better</Description>
     <AssemblyName>Apps.Zendesk</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.11.0" />
+    <PackageReference Include="Blackbird.Applications.SDK.Blueprints" Version="1.0.0" />
     <PackageReference Include="Blackbird.Applications.SDK.Extensions.FileManagement" Version="1.0.2-alpha2" />
     <PackageReference Include="Blackbird.Applications.Sdk.Utils" Version="1.0.25" />
-    <PackageReference Include="HtmlAgilityPack" Version="1.11.46" />
+    <PackageReference Include="Blackbird.Filters" Version="1.1.6" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Webhooks\Handlers\UserHandlers\" />

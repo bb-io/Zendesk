@@ -2,5 +2,5 @@
 
 public class SingleArticle
 {
-    public Article Article { get; set; }
+    public ArticleWithMissingLocales Article { get; set; }
 }

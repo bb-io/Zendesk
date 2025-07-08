@@ -1,10 +1,11 @@
 ﻿using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Files;
+using Blackbird.Applications.SDK.Blueprints.Interfaces.CMS;
 
 namespace Apps.Zendesk.Models.Responses;
 
-public class FileResponse
+public class FileResponse : IDownloadContentOutput
 {
-    [Display("Content file")]
-    public FileReference File { get; set; }
+    [Display("Content")]
+    public FileReference Content { get; set; }
 }

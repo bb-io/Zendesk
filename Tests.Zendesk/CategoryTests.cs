@@ -1,6 +1,7 @@
 ﻿using Apps.Zendesk.Actions;
 using Apps.Zendesk.Models.Identifiers;
 using Blackbird.Applications.Sdk.Common.Files;
+using Newtonsoft.Json;
 using ZendeskTests.Base;
 
 namespace Tests.Zendesk
@@ -17,9 +18,9 @@ namespace Tests.Zendesk
 
             var result = action.GetAllCategories(input);
 
+            Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
             foreach (var category in result.Result)
-            {
-                Console.WriteLine($"{category.Name} - {category.Description}");
+            {                
                 Assert.IsNotNull(category);
             }
         }
@@ -29,11 +30,11 @@ namespace Tests.Zendesk
         {
             var action = new CategoryActions(InvocationContext);
 
-            var input = new CategoryIdentifier { Id = "19612818365457" };
+            var input = new CategoryIdentifier { Id = "11187144610321" };
 
-            var result = action.GetCategory(input);
+            var result = await action.GetCategory(input);
 
-            Console.WriteLine($"{result.Result.Id} - {result.Result.Name}");
+            Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
             Assert.IsNotNull(result);
         }
 

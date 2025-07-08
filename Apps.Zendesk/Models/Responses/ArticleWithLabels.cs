@@ -14,7 +14,7 @@ namespace Apps.Zendesk.Models.Responses
 
         public ArticleWithLabels(Article article, IEnumerable<string> labels)
         {
-            Id = article.Id;            
+            ContentId = article.ContentId;            
             HtmlUrl = article.HtmlUrl;
             AuthorId = article.AuthorId;
             CommentsDisabled = article.CommentsDisabled;

@@ -8,7 +8,7 @@ using RestSharp;
 
 namespace Apps.Zendesk.Actions;
 
-[ActionList]
+[ActionList("General")]
 public class HelpCenterActions : BaseInvocable
 {
     private ZendeskClient Client { get; }
