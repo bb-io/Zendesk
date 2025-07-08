@@ -32,7 +32,7 @@ public class PollingList : BaseInvocable
             .SelectMany(x => x.Articles)
             .ToArray();
 
-        var articleLabelsMap = response.ToDictionary(x => x.Id, x => x.Labels);
+        var articleLabelsMap = response.ToDictionary(x => x.ContentId, x => x.Labels);
 
         if (request.Memory is null)
         {
@@ -46,7 +46,7 @@ public class PollingList : BaseInvocable
             };
         }
 
-        var updatedArticles = response.Where(x => !request.Memory.ArticleLabelsMap.Keys.Contains(x.Id)).ToArray();
+        var updatedArticles = response.Where(x => !request.Memory.ArticleLabelsMap.Keys.Contains(x.ContentId)).ToArray();
 
         if (!updatedArticles.Any())
         {

@@ -13,6 +13,8 @@ using Blackbird.Applications.Sdk.Common.Webhooks;
 using Newtonsoft.Json;
 using RestSharp;
 using Blackbird.Applications.SDK.Blueprints;
+using Apps.Zendesk.Models.Identifiers;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Apps.Zendesk.Webhooks;
 
@@ -133,58 +135,66 @@ public class WebhookList : BaseInvocable
             };
         }
 
-        SingleArticle? articleMetadata = null;
-        if ((input.OnlyIfSource != null && input.OnlyIfSource.Value) || input.RequiredLabel != null)
+        var article = await CreatePublishedArticleResponse(data);
+
+        if (input.OnlyIfSource != null && input.OnlyIfSource.Value)
         {
-            var locale = data.Event.Locale;
-            var id = data.Detail.Id;
-            var request = new ZendeskRequest($"/api/v2/help_center/articles/{id}", Method.Get);
-            var response = await Client.ExecuteWithHandling<SingleArticle>(request);
-            articleMetadata = response;
-
-            if (input.OnlyIfSource != null && input.OnlyIfSource.Value)
+            if (article.SourceLocale != data.Event.Locale)
             {
-                if (response.Article.SourceLocale != locale)
+                return new WebhookResponse<ArticlePublishedResponse>
                 {
-                    return new WebhookResponse<ArticlePublishedResponse>
-                    {
-                        HttpResponseMessage = null,
-                        ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                        Result = null
-                    };
-                }
+                    HttpResponseMessage = null,
+                    ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                    Result = null
+                };
             }
+        }
 
-            if (input.RequiredLabel != null)
+        if (input.RequiredLabel != null)
+        {
+            if (!article.Labels.Contains(input.RequiredLabel, StringComparer.OrdinalIgnoreCase))
             {
-                if (response.Article.Labels == null ||
-                    !response.Article.Labels.Contains(input.RequiredLabel, StringComparer.OrdinalIgnoreCase))
+                return new WebhookResponse<ArticlePublishedResponse>
                 {
-                    return new WebhookResponse<ArticlePublishedResponse>
-                    {
-                        HttpResponseMessage = null,
-                        ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                        Result = null
-                    };
-                }
+                    HttpResponseMessage = null,
+                    ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+                    Result = null
+                };
             }
         }
 
         return new WebhookResponse<ArticlePublishedResponse>
         {
             HttpResponseMessage = null,
-            Result = new ArticlePublishedResponse
-            {
-                ContentId = data.Detail.Id,
-                AuthorId = data.Event.AuthorId,
-                CategoryId = data.Event.CategoryId,
-                Locale = data.Event.Locale,
-                SectionId = data.Event.SectionId,
-                Title = data.Event.Title,
-                BrandId = data.Detail.BrandId,
-                AccountId = data.AccountId.ToString(),
-                Labels = articleMetadata?.Article.Labels?.ToList() ?? new List<string>()
-            }
+            Result = article,
+        };
+    }
+
+    private async Task<MissingLocales> GetArticleMissingTranslations(string articleId)
+    {
+        var request = new ZendeskRequest($"/api/v2/help_center/articles/{articleId}/translations/missing", Method.Get);
+        return await Client.ExecuteWithHandling<MissingLocales>(request);
+    }
+
+    public async Task<ArticlePublishedResponse> CreatePublishedArticleResponse<T>(ArticlePayloadTemplate<T> data)
+    {
+        var request = new ZendeskRequest($"/api/v2/help_center/articles/{data.Detail.Id}", Method.Get);
+        var response = await Client.ExecuteWithHandling<SingleArticle>(request);
+        var missingLocales = await GetArticleMissingTranslations(data.Detail.Id);
+
+        return new ArticlePublishedResponse
+        {
+            ContentId = data.Detail.Id,
+            AuthorId = response?.Article.AuthorId,
+            Locale = response?.Article.Locale,
+            SectionId = response?.Article.SectionId,
+            Title = response?.Article.Title,
+            BrandId = data.Detail.BrandId,
+            AccountId = data.AccountId.ToString(),
+            Labels = response?.Article.Labels?.ToList() ?? [],
+            OutdatedLocales = response?.Article.OutdatedLocales?.ToList() ?? [],
+            MissingLocales = missingLocales.Locales,
+            SourceLocale = response?.Article?.SourceLocale,
         };
     }
 
@@ -245,14 +255,11 @@ public class WebhookList : BaseInvocable
             };
         }
 
-        var id = data.Detail.Id;
-        var request = new ZendeskRequest($"/api/v2/help_center/articles/{id}", Method.Get);
-        var response = await Client.ExecuteWithHandling<SingleArticle>(request);
-        var article = response.Article; 
+        var article = await CreatePublishedArticleResponse(data);
 
         if (input.RequiredLabel != null)
         {
-            if (article.Labels == null || !article.Labels.Contains(input.RequiredLabel, StringComparer.OrdinalIgnoreCase))
+            if (!article.Labels.Contains(input.RequiredLabel, StringComparer.OrdinalIgnoreCase))
             {
                 return new WebhookResponse<ArticlePublishedResponse>
                 {
@@ -266,17 +273,7 @@ public class WebhookList : BaseInvocable
         return new WebhookResponse<ArticlePublishedResponse>
         {
             HttpResponseMessage = null,
-            Result = new ArticlePublishedResponse
-            {
-                ContentId = data.Detail.Id,
-                AuthorId = article.AuthorId,   
-                Locale = article.SourceLocale,    
-                SectionId = article.SectionId,   
-                Title = article.Title,       
-                BrandId = data.Detail.BrandId,
-                AccountId = data.AccountId.ToString(),
-                Labels = article.Labels?.ToList() ?? new List<string>()
-            }
+            Result = article
         };
     }
 

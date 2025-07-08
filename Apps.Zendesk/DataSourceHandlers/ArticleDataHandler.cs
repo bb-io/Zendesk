@@ -28,6 +28,6 @@ public class ArticleDataHandler : BaseInvocable, IAsyncDataSourceItemHandler
 
         return articles
             .OrderByDescending(x => x.UpdatedAt)
-            .Select(x => new DataSourceItem(x.Id.ToString(), x.Title));
+            .Select(x => new DataSourceItem(x.ContentId.ToString(), x.Title));
     }
 }

@@ -54,7 +54,7 @@ namespace Tests.Zendesk
             var result = await actions.GetArticle(new ArticleIdentifier { ContentId = TestArticleId });
             Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
 
-            Assert.IsNotNull(result.Id);
+            Assert.IsNotNull(result.ContentId);
         }
 
         [TestMethod]

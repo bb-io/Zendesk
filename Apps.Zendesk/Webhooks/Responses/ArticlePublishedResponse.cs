@@ -7,9 +7,6 @@ public class ArticlePublishedResponse : ArticleResponse
     [Display("Author")]
     public string AuthorId { get; set; }
 
-    [Display("Category")]
-    public string CategoryId { get; set; }
-
     public string Locale { get; set; }
 
     [Display("Section")]
@@ -24,4 +21,13 @@ public class ArticlePublishedResponse : ArticleResponse
 
     [Display("Labels")]
     public IEnumerable<string> Labels { get; set; }
+
+    [Display("Missing locales")]
+    public List<string> MissingLocales { get; set; }
+
+    [Display("Outdated locales")]
+    public List<string> OutdatedLocales { get; set; }
+
+    [Display("Source locale")]
+    public string SourceLocale { get; set; }
 }
