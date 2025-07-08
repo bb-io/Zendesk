@@ -4,21 +4,20 @@ using Blackbird.Applications.Sdk.Common.Dynamic;
 using HtmlAgilityPack;
 using System.Text;
 using Blackbird.Applications.Sdk.Common.Files;
-using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
-using Blackbird.Applications.Sdk.Utils.Extensions.Files;
 using System.Web;
 using Blackbird.Applications.Sdk.Common.Exceptions;
+using Blackbird.Applications.SDK.Blueprints.Interfaces.CMS;
 
 namespace Apps.Zendesk.Models.Requests;
 
-public class FileTranslationRequest
+public class FileTranslationRequest : IUploadContentInput
 {
     [DataSource(typeof(LocaleDataHandler))]
     [Display("Locale")]
     public string Locale { get; set; }
 
-    [Display("HTML file")]
-    public FileReference File { get; set; }
+    [Display("Content")]
+    public FileReference Content { get; set; }
 
     [Display("Is draft")]
     public bool? Draft { get; set; }
@@ -26,22 +25,24 @@ public class FileTranslationRequest
     [Display("Is outdated")]
     public bool? Outdated { get; set; }
 
-    public static string? ExtractBlackbirdId(byte[] fileBytes)
+    [DataSource(typeof(ArticleDataHandler))]
+    [Display("Article ID")]
+    public string? ContentId { get; set; }
+
+    public static string? ExtractBlackbirdId(string html)
     {
-        var fileString = Encoding.UTF8.GetString(fileBytes);
         var doc = new HtmlDocument();
-        doc.LoadHtml(fileString);
+        doc.LoadHtml(html);
         var referenceId = doc.DocumentNode.SelectSingleNode($"//meta[@name='{Constants.Constants.BlackbirdReferenceId}']")?.GetAttributeValue("content", null) ?? null;
 
         return referenceId;
     }
 
-    public object Convert(byte[] fileBytes, bool isLocaleMissing)
+    public object Convert(string html, bool isLocaleMissing)
     {
-        var fileString = Encoding.UTF8.GetString(fileBytes);
         var localeInRequest = isLocaleMissing ? Locale : null;
         var doc = new HtmlDocument();
-        doc.LoadHtml(fileString);
+        doc.LoadHtml(html);
 
         var title = HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode("html/head/title")?.InnerText);
         var body = doc.DocumentNode.SelectSingleNode("/html/body")?.InnerHtml;

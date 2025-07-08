@@ -2,5 +2,5 @@
 
 public class SingleCategory
 {
-    public Category Category { get; set; }
+    public CategoryWithMissingLocales Category { get; set; }
 }

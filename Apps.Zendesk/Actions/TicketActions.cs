@@ -10,7 +10,7 @@ using RestSharp;
 
 namespace Apps.Zendesk.Actions;
 
-[ActionList]
+[ActionList("Tickets")]
 public class TicketActions : BaseInvocable
 {
     private ZendeskClient Client { get; }

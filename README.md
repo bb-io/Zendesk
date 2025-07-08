@@ -33,17 +33,12 @@ Before you can connect you need to make sure that:
 
 ## Actions
 
-### General
-
-- **Search helpcenter locales** returns both the default locale of the helpcenter, as well as the list of locales that have been configured in Zendesk. You can find these settings in the Zendesk help center > Settings > Language settings.
-
 ### Articles
 
 - **Search articles** search articles using various filter parameters
-- **Get/create/update/archive article (metadata)** used to configure metadata variables such as section, author, position, permission group, user segment, etc.
-- **Search article missing locales** returns a list of locales that have been configured in Zendesk but are not present for this article. It can be used to create the missing translations.
-- **Download article content** downloads the translatable content of an article as a file. Use this action in conjunction with some translation app and 'Upload article content'.
-- **Upload article content** updates the translation for an article, creates a new translation if there is none. Takes a translated file (HTML) as input. As the article ID is included in the head of the HTML file, it will update the correct article, but you can specify the `Article ID` in the action as well.
+- **Get/create/update/archive article (metadata)** used to configure metadata variables such as section, author, position, permission group, user segment, missing locales, outdated locales, etc.
+- **Download article** downloads the translatable content of an article as a file. Use this action in conjunction with some translation app and 'Upload article'.
+- **Upload article** updates the translation for an article, creates a new translation if there is none. Takes a translated file as input. As the article ID is included in the head of the file, it will update the correct article, but you can specify the `Article ID` in the action as well.
 - **Add label to article** on a professional or enterprise plan, it adds a label to an article.
 - **Delete label from article** on a professional or enterprise plan, it deletes a label from an article.
 
@@ -51,22 +46,25 @@ Before you can connect you need to make sure that:
 
 ### Categories
 
-- **Get all categories** returns all categories on this Zendesk instance. You can also specify the _Missing translation in_ variable, in which case this action will only return categories that are actually missing translations in that language.
-- **Get category articles** returns all articles in this category.
-- **Create/update/delete category**.
-- **Get category missing translations** returns a list of locales that have been configured in Zendesk but are not present for this category. It can be used to create the missing translations.
+- **Search categories** returns all categories on this Zendesk instance. You can also specify the _Missing translation in_ variable, in which case this action will only return categories that are actually missing translations in that language.
+- **Get/Create/update/delete category**.
+- **Get category translation** returns the content of a category, namely its name and description (body).
 - **Update category translation** creates a translation if there is none, or updates the translation if it already exists.
 
 ### Sections
 
-- **Get all sections** returns all sections on this Zendesk instance. Optionally you can also specify the category, which will limit the search to that specific category. You can also specify the _Missing translation in_ variable, in which case this action will only return sections that are actually missing translations in that language.
-- **Create/update/delete section**.
-- **Get section missing translations** returns a list of locales that have been configured in Zendesk but are not present for this section. It can be used to create the missing translations.
+- **Search sections** returns all sections on this Zendesk instance. Optionally you can also specify the category, which will limit the search to that specific category. You can also specify the _Missing translation in_ variable, in which case this action will only return sections that are actually missing translations in that language.
+- **Get/Create/update/delete section**.
+- **Get section translation**  returns the content of a section, namely its name and description (body).
 - **Update section translation** creates a translation if there is none, or updates the translation if it already exists.
+
+### General
+
+- **Search helpcenter locales** returns both the default locale of the helpcenter, as well as the list of locales that have been configured in Zendesk. You can find these settings in the Zendesk help center > Settings > Language settings.
 
 ### Tickets
 
-- **Create/update/delete ticket**.
+- **Search/get/create/update/delete ticket**.
 
 ## Events
 
