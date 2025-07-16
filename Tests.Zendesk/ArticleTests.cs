@@ -111,6 +111,19 @@ namespace Tests.Zendesk
         }
 
         [TestMethod]
+        public async Task UploadArticle_content_for_other_test_article()
+        {
+            var actions = new ArticleActions(InvocationContext, FileManager);
+            var fileName = "Taking Flight How Blackbird is Changing the Language Space.html.xlf";
+            var fileReference = new FileReference { Name = fileName };
+
+            var uploadResult = await actions.TranslateArticleFromFile(new FileTranslationRequest { Locale = "nl", Content = fileReference });
+            Console.WriteLine(JsonConvert.SerializeObject(uploadResult, Formatting.Indented));
+
+            Assert.IsTrue(uploadResult.Id is not null);
+        }
+
+        [TestMethod]
         public async Task Add_label_works()
         {
             var actions = new ArticleActions(InvocationContext, FileManager);
