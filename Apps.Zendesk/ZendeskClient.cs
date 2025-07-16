@@ -98,7 +98,7 @@ public class ZendeskClient : RestClient
         }
     }
 
-    public async Task<RestResponse> ExecuteWithRetries(RestRequest request, int retryCount = 3)
+    public async Task<RestResponse> ExecuteWithRetries(RestRequest request, int retryCount = 6)
     {
         var attempt = 0;
         var latestErrorMessage = string.Empty;
@@ -108,23 +108,65 @@ public class ZendeskClient : RestClient
             attempt++;
             try
             {
-                var response = await ExecuteWithHandling(request);
+                var response = await ExecuteAsync(request);
                 if (response.IsSuccessStatusCode)
                 {
                     return response;
                 }
-
-                latestErrorMessage = response.Content;
+                
+                if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    Context.Logger?.LogWarning($"[ZendeskClient] Rate limit exceeded (attempt {attempt}/{retryCount}). StatusCode: {response.StatusCode}", []);
+                    
+                    int delaySeconds = 0;
+                    if (response.Headers != null && 
+                        response.Headers.Any(h => h.Name?.Equals("Retry-After", StringComparison.OrdinalIgnoreCase) == true) &&
+                        int.TryParse(response.Headers.First(h => 
+                            h.Name?.Equals("Retry-After", StringComparison.OrdinalIgnoreCase) == true).Value?.ToString(), 
+                            out delaySeconds))
+                    {
+                        await Task.Delay(delaySeconds * 1000);
+                    }
+                    else
+                    {
+                        var baseDelay = Math.Pow(2, attempt) * 1000;
+                        var jitter = new Random().Next(0, 1000);
+                        var delay = Math.Min(baseDelay + jitter, 60000);
+                        
+                        Context.Logger?.LogInformation($"[ZendeskClient] Using exponential backoff: {delay}ms", []);
+                        await Task.Delay((int)delay);
+                    }
+                    
+                    latestErrorMessage = $"Rate limit exceeded: {response.Content}";
+                    continue;
+                }
+                
+                try
+                {
+                    return await ExecuteWithHandling(request);
+                }
+                catch (PluginApplicationException ex)
+                {
+                    latestErrorMessage = ex.Message;
+                    
+                    if (attempt >= retryCount)
+                        throw;
+                    
+                    await Task.Delay(5000 * attempt);
+                }
             }
-            catch (PluginApplicationException ex)
+            catch (Exception ex) when (!(ex is PluginApplicationException))
             {
                 latestErrorMessage = ex.Message;
+                Context.Logger?.LogError($"[ZendeskClient] Unexpected error during retry {attempt}/{retryCount}: {ex.Message}", []);
 
                 if (attempt >= retryCount)
-                    throw;
+                {
+                    throw new PluginApplicationException("Error during request execution after multiple retries", ex);
+                }
+                    
+                await Task.Delay(5000 * attempt);
             }
-
-            await Task.Delay(5000 * attempt);
         }
 
         throw new PluginApplicationException($"Request failed after {retryCount} attempts. With the latest error: {latestErrorMessage}");
@@ -159,6 +201,7 @@ public class ZendeskClient : RestClient
         }
 
         ErrorResponse? errorResponse = null;
+
         try
         {
             errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(response.Content!);
