@@ -60,7 +60,7 @@ Before you can connect you need to make sure that:
 
 ### General
 
-- **Search helpcenter locales** returns both the default locale of the helpcenter, as well as the list of locales that have been configured in Zendesk. You can find these settings in the Zendesk help center > Settings > Language settings.
+- **Search helpcenter languages** returns the default language of the helpcenter, the additional languages, as well as the complete list of languages that have been configured in Zendesk. You can find these settings in the Zendesk help center > Settings > Language settings.
 
 ### Tickets
 

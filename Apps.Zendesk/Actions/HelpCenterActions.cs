@@ -18,7 +18,7 @@ public class HelpCenterActions : BaseInvocable
         Client = new ZendeskClient(invocationContext);
     }
 
-    [Action("Search helpcenter locales", Description = "Get all the activated helpcenter locales")]
+    [Action("Search helpcenter languages", Description = "Get all the activated helpcenter languages")]
     public async Task<EnabledLocales> ListLocales()
     {
         var request = new ZendeskRequest($"/api/v2/help_center/locales", Method.Get);
