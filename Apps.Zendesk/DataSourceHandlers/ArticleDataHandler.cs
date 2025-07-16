@@ -18,12 +18,12 @@ public class ArticleDataHandler : BaseInvocable, IAsyncDataSourceItemHandler
         if (string.IsNullOrEmpty(context.SearchString))
         {
             var request = new ZendeskRequest("/api/v2/help_center/articles", Method.Get);
-            articles = (await client.ExecuteWithRetries<MultipleArticles>(request)).Articles;
+            articles = (await client.ExecuteWithHandling<MultipleArticles>(request)).Articles;
         } else
         {
             var request = new ZendeskRequest("/api/v2/help_center/articles/search", Method.Get);
             request.AddQueryParameter("query", context.SearchString);
-            articles = (await client.ExecuteWithRetries<SearchResponse<Article>>(request)).Results;
+            articles = (await client.ExecuteWithHandling<SearchResponse<Article>>(request)).Results;
         }
 
         return articles

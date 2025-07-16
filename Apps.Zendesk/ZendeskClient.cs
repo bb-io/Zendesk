@@ -13,6 +13,12 @@ namespace Apps.Zendesk;
 
 public class ZendeskClient : RestClient
 {
+    private const int DefaultMaxRetries = 5;
+    private const int InternalServerErrorBaseDelayMs = 3000;
+    private const int InternalServerErrorMaxDelayMs = 15000;
+    private const int RateLimitMaxDelayMs = 60000;
+    private const int RateLimitJitterMaxMs = 1000;
+
     private InvocationContext Context { get; }
 
     public ZendeskClient(InvocationContext invocationContext) :
@@ -83,9 +89,66 @@ public class ZendeskClient : RestClient
         return results;
     }
 
-    public async Task<T> ExecuteWithRetries<T>(ZendeskRequest request, int retryCount = 3)
+    public async Task<RestResponse> ExecuteWithHandling(RestRequest request, int maxRetries = DefaultMaxRetries)
     {
-        var response = await ExecuteWithRetries(request, retryCount);
+        int attempt = 0;
+        RestResponse response;
+        string latestErrorMessage = string.Empty;
+
+        while (attempt <= maxRetries)
+        {
+            try
+            {
+                response = await ExecuteAsync(request);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return response;
+                }
+
+                if (ShouldRetry(response.StatusCode))
+                {
+                    attempt++;
+
+                    if (attempt > maxRetries)
+                    {
+                        Context.Logger?.LogWarning($"[ZendeskClient] Maximum retry attempts reached ({maxRetries}) for {response.StatusCode}", []);
+                        break;
+                    }
+
+                    Context.Logger?.LogWarning($"[ZendeskClient] Retrying request (attempt {attempt}/{maxRetries}) due to {response.StatusCode}", []);
+                    latestErrorMessage = $"Status code: {response.StatusCode}, Content: {response.Content}";
+
+                    TimeSpan delay;
+                    if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                    {
+                        delay = CalculateDelayForRateLimit(response, attempt);
+                    }
+                    else // InternalServerError
+                    {
+                        delay = TimeSpan.FromMilliseconds(Math.Min(InternalServerErrorBaseDelayMs * attempt, InternalServerErrorMaxDelayMs));
+                    }
+
+                    await Task.Delay(delay);
+                    continue;
+                }
+
+                return ProcessErrorResponse(response);
+            }
+            catch (Exception ex) when (!(ex is PluginApplicationException))
+            {
+                latestErrorMessage = ex.Message;
+                Context.Logger?.LogError($"[ZendeskClient] Unexpected error: {ex.Message}", []);
+                throw new PluginApplicationException("Error during request execution", ex);
+            }
+        }
+
+        throw new PluginApplicationException($"Request failed after {maxRetries} attempts. Latest error: {latestErrorMessage}");
+    }
+
+    public async Task<T> ExecuteWithHandling<T>(RestRequest request)
+    {
+        var response = await ExecuteWithHandling(request);
 
         try
         {
@@ -98,54 +161,40 @@ public class ZendeskClient : RestClient
         }
     }
 
-    public async Task<RestResponse> ExecuteWithRetries(RestRequest request, int retryCount = 3)
+    private TimeSpan CalculateDelayForRateLimit(RestResponse response, int attempt)
     {
-        var attempt = 0;
-        var latestErrorMessage = string.Empty;
-
-        while (attempt < retryCount)
+        if (response.Headers != null &&
+            response.Headers.Any(h => h.Name?.Equals("Retry-After", StringComparison.OrdinalIgnoreCase) == true))
         {
-            attempt++;
-            try
+            var retryHeader = response.Headers.First(h =>
+                h.Name?.Equals("Retry-After", StringComparison.OrdinalIgnoreCase) == true).Value?.ToString();
+
+            if (int.TryParse(retryHeader, out int delaySeconds))
             {
-                var response = await ExecuteWithHandling(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    return response;
-                }
-
-                latestErrorMessage = response.Content;
+                Context.Logger?.LogInformation($"[ZendeskClient] Using Retry-After header: {delaySeconds} seconds", []);
+                return TimeSpan.FromSeconds(delaySeconds);
             }
-            catch (PluginApplicationException ex)
-            {
-                latestErrorMessage = ex.Message;
-
-                if (attempt >= retryCount)
-                    throw;
-            }
-
-            await Task.Delay(5000 * attempt);
         }
 
-        throw new PluginApplicationException($"Request failed after {retryCount} attempts. With the latest error: {latestErrorMessage}");
+        var baseDelay = Math.Pow(2, attempt) * 1000;
+        var jitter = new Random().Next(0, RateLimitJitterMaxMs);
+        var delay = Math.Min(baseDelay + jitter, RateLimitMaxDelayMs);
+
+        Context.Logger?.LogInformation($"[ZendeskClient] Using exponential backoff: {delay}ms", []);
+        return TimeSpan.FromMilliseconds(delay);
     }
 
-    public async Task<RestResponse> ExecuteWithHandling(RestRequest request)
+    private bool ShouldRetry(HttpStatusCode statusCode)
     {
-        RestResponse response;
+        return statusCode == HttpStatusCode.TooManyRequests ||
+               statusCode == HttpStatusCode.InternalServerError;
+    }
 
-        try
-        {
-            response = await ExecuteAsync(request);
-        }
-        catch (Exception ex)
-        {
-            throw new PluginApplicationException("Error:", ex);
-        }
-
+    private RestResponse ProcessErrorResponse(RestResponse response)
+    {
         var content = response.RawBytes != null
-               ? Encoding.UTF8.GetString(response.RawBytes)
-               : response.Content ?? string.Empty;
+            ? Encoding.UTF8.GetString(response.RawBytes)
+            : response.Content ?? string.Empty;
 
         if (response.ContentType?.Contains("html", StringComparison.OrdinalIgnoreCase) == true
                 || content.TrimStart().StartsWith("<"))
@@ -159,6 +208,7 @@ public class ZendeskClient : RestClient
         }
 
         ErrorResponse? errorResponse = null;
+
         try
         {
             errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(response.Content!);
@@ -185,14 +235,22 @@ public class ZendeskClient : RestClient
         else if (response.StatusCode == HttpStatusCode.Conflict)
         {
             exceptionMessage = errorResponse.Error == "Conflict"
-                ? "API response indicates a conflict with the resource you're trying to create or update. This error typically occur when two or more requests try to create or change the same resource simultaneously."
-                : $"errorResponse.Error";
+                ? "API response indicates a conflict with the resource you're trying to create or update. This error typically occurs when two or more requests try to create or change the same resource simultaneously."
+                : $"{errorResponse.Error}";
         }
         else if (response.StatusCode == HttpStatusCode.InternalServerError)
         {
             exceptionMessage = errorResponse.Error == "InternalServerError"
-                ? "Error happened on Zenbdesk server. Please, add retry policy to this action."
+                ? "Error happened on Zendesk server. Retrying the request."
                 : $"Error: {errorResponse.Error}";
+
+            // For InternalServerError, we'll let the retry mechanism handle it
+            return response;
+        }
+        else if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            // For TooManyRequests, we'll let the retry mechanism handle it
+            return response;
         }
         else
         {
@@ -200,11 +258,5 @@ public class ZendeskClient : RestClient
         }
 
         throw new PluginApplicationException($"{exceptionMessage}");
-    }
-
-    public async Task<T> ExecuteWithHandling<T>(RestRequest request)
-    {
-        var response = await ExecuteWithHandling(request);
-        return JsonConvert.DeserializeObject<T>(response.Content);
     }
 }
