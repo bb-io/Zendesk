@@ -5,7 +5,7 @@ namespace Apps.Zendesk.Webhooks.Payload
     public class TicketCommentCreatedWebhook
     {
         [JsonProperty("account_id")]
-        public long AccountId { get; set; }
+        public string AccountId { get; set; }
 
         [JsonProperty("detail")]
         public TicketCommentDetail Detail { get; set; } = null!;
