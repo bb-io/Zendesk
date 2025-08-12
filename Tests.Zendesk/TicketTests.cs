@@ -1,4 +1,5 @@
 ﻿using Apps.Zendesk.Actions;
+using Apps.Zendesk.Models.Identifiers;
 using Apps.Zendesk.Models.Requests;
 using System.Text.Json;
 using ZendeskTests.Base;
@@ -26,6 +27,23 @@ namespace Tests.Zendesk
             var json = JsonSerializer.Serialize(result.Tickets, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
             Console.WriteLine(json);
             Assert.IsNotNull(result);
+        }
+
+        [TestMethod]
+        public async Task GetTicketComments_IsSuccess()
+        {
+            var action = new TicketActions(InvocationContext);
+
+            var article = new TicketIdentifier
+            {
+                Id = "32"
+            };
+
+            var response = await action.GetTicketComments(article);
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(response, Newtonsoft.Json.Formatting.Indented);
+            Console.WriteLine(json);
+
+            Assert.IsNotNull(response);
         }
     }
 }

@@ -62,6 +62,18 @@ public class TicketActions : BaseInvocable
         return new ListTicketsResponse { Tickets = tickets };
     }
 
+    [Action("Get ticket comments", Description = "List comments for a ticket")]
+    public async Task<ListTicketCommentsResponse> GetTicketComments(
+           [ActionParameter] TicketIdentifier ticket)
+    {
+        var endpoint = $"/api/v2/tickets/{ticket.Id}/comments";
+
+        var request = new ZendeskRequest(endpoint, Method.Get);
+
+        var comments = await Client.ExecuteWithHandling<ListTicketCommentsResponse>(request);
+
+        return comments;
+    }
 
     [Action("Get ticket", Description = "Get a specific ticket")]
     public async Task<Ticket> GetTicket([ActionParameter] TicketIdentifier ticket)
