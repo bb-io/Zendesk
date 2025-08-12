@@ -24,9 +24,6 @@ namespace Apps.Zendesk.Webhooks.Payload
 
         [JsonProperty("type")]
         public string Type { get; set; } = null!;
-
-        [JsonProperty("zendesk_event_version")]
-        public string ZendeskEventVersion { get; set; } = null!;
     }
 
     public class TicketCommentDetail
