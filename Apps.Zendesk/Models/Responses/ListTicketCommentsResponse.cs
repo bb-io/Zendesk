@@ -10,7 +10,7 @@ namespace Apps.Zendesk.Models.Responses
 
     public class TicketComment
     {
-        [Display("Ticket ID")]
+        [Display("Comment ID")]
         public string Id { get; set; }
         public string? Type { get; set; }
 
