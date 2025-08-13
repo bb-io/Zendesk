@@ -76,6 +76,14 @@ Before you can connect you need to make sure that:
 ![example](image/README/1692615904702.png)
 This example shows one of many use cases. Here, whenever an article is published we fetch the missing translations and retrieve the article as an HTML file. Then we create a new Lokalise project with the missing locales as the target languages and upload the article. Then we send a Slack message to notify the project manager.
 
+## Demo video
+
+How to Localize Zendesk Articles Automatically with Blackbird.io
+
+import { YouTube } from '@astro-community/astro-embed-youtube';
+
+<YouTube id="https://youtu.be/Nza3A0s81QY" />
+
 ## Missing features
 
 Most content related actions exist. However, in the future we can add actions for:
