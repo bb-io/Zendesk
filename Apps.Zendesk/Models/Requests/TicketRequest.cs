@@ -11,18 +11,37 @@ public class TicketRequest
 
     [DataSource(typeof(StatusDataHandler))]
     public string? Status { get; set; }
+
+    public bool? Public { get; set; }
+
     public string? Subject { get; set; }
 
     public object Convert()
     {
+        var hasComment = !string.IsNullOrWhiteSpace(Comment);
+
+        if (hasComment)
+        {
+            return new
+            {
+                ticket = new
+                {
+                    comment = new
+                    {
+                        body = $"{Comment}",
+                        @public = Public ?? false
+                    },
+                    priority = Priority,
+                    subject = Subject,
+                    status = Status
+                }
+            };
+        }
+
         return new
         {
             ticket = new
             {
-                comment = new
-                {
-                    body = Comment
-                },
                 priority = Priority,
                 subject = Subject,
                 status = Status
