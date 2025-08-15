@@ -64,13 +64,29 @@ public class TicketActions : BaseInvocable
 
     [Action("Get ticket comments", Description = "List comments for a ticket")]
     public async Task<ListTicketCommentsResponse> GetTicketComments(
-           [ActionParameter] TicketIdentifier ticket)
+           [ActionParameter] TicketIdentifier ticket, [ActionParameter] TicketCommentsFilterInput filter)
     {
         var endpoint = $"/api/v2/tickets/{ticket.Id}/comments";
 
         var request = new ZendeskRequest(endpoint, Method.Get);
 
+        if (filter?.NewestFirst != false)
+            request.AddQueryParameter("sort", "-created_at");
+
         var comments = await Client.ExecuteWithHandling<ListTicketCommentsResponse>(request);
+
+        comments.Comments = comments.Comments
+        .Where(c =>
+        {
+            var ts = c.CreatedAt;
+            var ok = true;
+            if (filter.CreatedAfterUtc is not null)
+                ok &= ts >= DateTime.SpecifyKind(filter.CreatedAfterUtc.Value, DateTimeKind.Utc);
+            if (filter.CreatedBeforeUtc is not null)
+                ok &= ts <= DateTime.SpecifyKind(filter.CreatedBeforeUtc.Value, DateTimeKind.Utc);
+            return ok;
+        })
+        .ToList();
 
         return comments;
     }

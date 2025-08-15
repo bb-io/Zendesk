@@ -21,7 +21,7 @@ namespace Apps.Zendesk.Webhooks
 
         [Webhook("On ticket comment created", typeof(TicketCommentCreatedHandler), Description = "On ticket comment created")]
         public async Task<WebhookResponse<TicketCommentCreatedEventDto>> OnTicketCommentCreatedHandler(WebhookRequest webhookRequest,
-            [WebhookParameter] TicketCommentFiltersInput? input)
+            [WebhookParameter] TicketCommentFiltersInput input)
         {
             var data = JsonConvert.DeserializeObject<TicketCommentCreatedWebhook>(webhookRequest.Body.ToString());
             if (data is null) { throw new InvalidCastException(nameof(webhookRequest.Body)); }
