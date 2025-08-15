@@ -39,7 +39,8 @@ namespace Tests.Zendesk
                 Id = "32"
             };
 
-            var response = await action.GetTicketComments(article);
+            var response = await action.GetTicketComments(article, new TicketCommentsFilterInput { /*CreatedAfterUtc = DateTime.UtcNow.AddDays(-1)*/ });
+            Console.WriteLine($"Total comments found: {response.Comments.Count()}");
             var json = Newtonsoft.Json.JsonConvert.SerializeObject(response, Newtonsoft.Json.Formatting.Indented);
             Console.WriteLine(json);
 
