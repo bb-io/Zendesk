@@ -106,6 +106,7 @@ There is 2 ways how to prevent it:
 2. Use the orchestration with labels for article, adding the filter to the webhook  for required label (for example ‘to_translate’), after it was triggered, delete it and add new label (for example ‘in_progress’), and after the content was translated and the final label(for example ‘translate_done’)
 
 Sample:
+
 ![Sample](image/README/sample-prevent-loop.png)
 
 ## Feedback
