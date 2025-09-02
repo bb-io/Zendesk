@@ -97,6 +97,17 @@ Most content related actions exist. However, in the future we can add actions fo
 
 Let us know if you're interested!
 
+## Keep it from looping
+
+In case if you use in your automatization the webhook ‘On article published’ and action ‘Upload article’, please be careful because the action ‘Upload article’ publishes the uploaded article, causing the infinite loop triggering the webhook ‘On article published’. 
+There is 2 ways how to prevent it:
+
+1. In action ‘Upload article’ specify the property draft = true (remember it will upload it only as draft)
+2. Use the orchestration with labels for article, adding the filter to the webhook  for required label (for example ‘to_translate’), after it was triggered, delete it and add new label (for example ‘in_progress’), and after the content was translated and the final label(for example ‘translate_done’)
+
+Sample:
+![Sample](image/README/sample-prevent-loop.png)
+
 ## Feedback
 
 Feedback to our implementation of Zendesk is always very welcome. Reach out to us using the established channels or create an issue.
