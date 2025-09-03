@@ -97,6 +97,19 @@ Most content related actions exist. However, in the future we can add actions fo
 
 Let us know if you're interested!
 
+## Keep it from looping
+
+Heads-up: using the On article published webhook together with the Upload article action can create an infinite loop. Upload article publishes the item, which re-triggers the webhook.
+
+How to prevent it:
+
+Set `draft = true` in Upload article so the upload is saved as a draft only.
+
+Use a label-based workflow: configure the webhook to trigger only for items with a specific label (e.g., to_translate). After it fires, remove that label and add a new one (e.g., in_progress, then translate_done) to avoid re-triggering.
+Sample:
+
+![Sample](image/README/sample-prevent-loop.png)
+
 ## Feedback
 
 Feedback to our implementation of Zendesk is always very welcome. Reach out to us using the established channels or create an issue.
