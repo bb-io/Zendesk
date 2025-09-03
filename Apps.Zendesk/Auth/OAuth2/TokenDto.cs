@@ -20,6 +20,7 @@ internal class TokenDto
     [JsonProperty("refresh_token_expires_in")]
     public int? RefreshTokenExpiresIn { get; set; }
 
+
     [JsonExtensionData]
     public Dictionary<string, JToken>? AdditionalData { get; set; }
 }
