@@ -6,20 +6,23 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.Zendesk.Auth.OAuth2;
 
-public class OAuth2TokenService : BaseInvocable, IOAuth2TokenService {
-    private string TokenUrl = "";
+public class OAuth2TokenService : BaseInvocable, IOAuth2TokenService 
+{
+    public OAuth2TokenService(InvocationContext invocationContext) : base(invocationContext) 
+    { }
 
-    public OAuth2TokenService(InvocationContext invocationContext) : base(invocationContext) { }
-
-    public bool IsRefreshToken(Dictionary<string, string> values) {
+    public bool IsRefreshToken(Dictionary<string, string> values) 
+    {
         var expiresAt = DateTime.Parse(values[CredNames.ExpiresAt]);
         return DateTime.UtcNow > expiresAt;
     }
 
-    public async Task<Dictionary<string, string>> RefreshToken(Dictionary<string, string> values, CancellationToken cancellationToken) {
-        TokenUrl = $"{new Uri(values["api_endpoint"]).GetLeftPart(UriPartial.Authority).TrimEnd('/')}/oauth/tokens";
-        
-        var parameters = new Dictionary<string, string> {
+    public async Task<Dictionary<string, string>> RefreshToken(Dictionary<string, string> values, CancellationToken cancellationToken) 
+    {
+        string tokenUrl = GetTokenUrl(values);
+
+        var parameters = new Dictionary<string, string> 
+        {
             { "grant_type", "refresh_token" },
             { "client_id", ApplicationConstants.ClientId },
             { "client_secret", ApplicationConstants.ClientSecret },
@@ -27,7 +30,8 @@ public class OAuth2TokenService : BaseInvocable, IOAuth2TokenService {
             { "expires_in", "3600" }
         };
 
-        var dictionary = await ExecuteTokenRequest(parameters, cancellationToken);
+        var tokenDto = await ExecuteTokenRequest(parameters, tokenUrl, cancellationToken);
+        var dictionary = TokenDtoToDictionary(tokenDto);
         AddExpiresAt(dictionary);
         return dictionary;
     }
@@ -38,10 +42,11 @@ public class OAuth2TokenService : BaseInvocable, IOAuth2TokenService {
         Dictionary<string, string> values, 
         CancellationToken cancellationToken)
     {
-        TokenUrl = $"{new Uri(values["api_endpoint"]).GetLeftPart(UriPartial.Authority).TrimEnd('/')}/oauth/tokens";
+        string tokenUrl = GetTokenUrl(values);
         string redirectUri = $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/AuthorizationCode";
 
-        var bodyParameters = new Dictionary<string, string> {
+        var bodyParameters = new Dictionary<string, string> 
+        {
             { "grant_type", "authorization_code" },
             { "client_id", ApplicationConstants.ClientId },
             { "client_secret", ApplicationConstants.ClientSecret },
@@ -50,32 +55,77 @@ public class OAuth2TokenService : BaseInvocable, IOAuth2TokenService {
             { "code", code }
         };
 
-        var dictionary = await ExecuteTokenRequest(bodyParameters, cancellationToken);
+        var tokenDto = await ExecuteTokenRequest(bodyParameters, tokenUrl, cancellationToken);
+        var dictionary = TokenDtoToDictionary(tokenDto);
         AddExpiresAt(dictionary);
         return dictionary;
     }
 
-    public Task RevokeToken(Dictionary<string, string> values) {
+    public Task RevokeToken(Dictionary<string, string> values) 
+    {
         throw new NotImplementedException();
     }
 
-    private async Task<Dictionary<string, string>> ExecuteTokenRequest(Dictionary<string, string> parameters,
-        CancellationToken cancellationToken) {
+    private async Task<TokenDto> ExecuteTokenRequest(Dictionary<string, string> parameters,
+        string tokenUrl,
+        CancellationToken cancellationToken) 
+    {
         using var client = new HttpClient();
         using var content = new FormUrlEncodedContent(parameters);
-        using var response = await client.PostAsync(TokenUrl, content, cancellationToken);
+        using var response = await client.PostAsync(tokenUrl, content, cancellationToken);
 
         var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
-        if (!response.IsSuccessStatusCode) {
+        if (!response.IsSuccessStatusCode) 
+        {
             throw new Exception($"Error requesting token: {response.StatusCode} - {responseContent}");
         }
 
-        return JsonConvert.DeserializeObject<Dictionary<string, string>>(responseContent!)!;
+        return JsonConvert.DeserializeObject<TokenDto>(responseContent!)!;
     }
 
-    private Dictionary<string, string> AddExpiresAt(Dictionary<string, string> dictionary) {
-        var expiresAt = DateTime.UtcNow.AddSeconds(int.Parse(dictionary[CredNames.ExpiresIn]));
-        dictionary.Add(CredNames.ExpiresAt, expiresAt.ToString());
+    private Dictionary<string, string> AddExpiresAt(Dictionary<string, string> dictionary) 
+    {
+        if (!dictionary.TryGetValue(CredNames.ExpiresIn, out var expiresAtSeconds) || string.IsNullOrEmpty(expiresAtSeconds)) 
+        {
+            throw new KeyNotFoundException("expires_in value not found or empty");
+        }
+
+        var expiresAt = DateTime.UtcNow.AddSeconds(int.Parse(expiresAtSeconds));
+        dictionary[CredNames.ExpiresAt] = expiresAt.ToString();
         return dictionary;
+    }
+
+    private string GetTokenUrl(Dictionary<string, string> values) 
+    {
+        if (!values.TryGetValue("api_endpoint", out var endpoint) || string.IsNullOrEmpty(endpoint)) 
+        {
+            throw new KeyNotFoundException("api_endpoint not found or empty");
+        }
+
+        var uri = new Uri(endpoint);
+        var baseUrl = uri.GetLeftPart(UriPartial.Authority).TrimEnd('/');
+        return $"{baseUrl}/oauth/tokens";
+    }
+
+    private Dictionary<string, string?> TokenDtoToDictionary(TokenDto tokenDto) 
+    {
+        var result = new Dictionary<string, string?> 
+        {
+            { "access_token", tokenDto.AccessToken },
+            { "refresh_token", tokenDto.RefreshToken },
+            { "token_type", tokenDto.TokenType },
+            { "scope", tokenDto.Scope },
+            { "refresh_token_expires_in", tokenDto.RefreshTokenExpiresIn?.ToString() }
+        };
+
+        if (tokenDto.AdditionalData != null) 
+        {
+            foreach (var kv in tokenDto.AdditionalData) 
+            {
+                result[kv.Key] = kv.Value.ToString();
+            }
+        }
+
+        return result;
     }
 }
