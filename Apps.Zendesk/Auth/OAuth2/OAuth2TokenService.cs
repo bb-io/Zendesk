@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Apps.Zendesk.Constants;
+using Apps.Zendesk.Models.Dtos;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
 using Blackbird.Applications.Sdk.Common.Invocation;
@@ -52,7 +53,8 @@ public class OAuth2TokenService : BaseInvocable, IOAuth2TokenService
             { "client_secret", ApplicationConstants.ClientSecret },
             { "redirect_uri", redirectUri },
             { "scope", ApplicationConstants.Scope },
-            { "code", code }
+            { "code", code },
+            { "expires_in", "3600" }
         };
 
         var tokenDto = await ExecuteTokenRequest(bodyParameters, tokenUrl, cancellationToken);

@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Apps.Zendesk.Auth.OAuth2;
+namespace Apps.Zendesk.Models.Dtos;
 
 internal class TokenDto 
 {
