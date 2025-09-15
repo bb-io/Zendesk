@@ -247,9 +247,22 @@ public class ArticleActions : BaseInvocable
     }
 
     [Action("Delete label from article", Description = "Delete a label from an article")]
-    public async Task DeleteArticleLabel([ActionParameter] ArticleIdentifier article, [ActionParameter] LocaleIdentifier locale, [ActionParameter, Display("Label ID"), DataSource(typeof(LabelDataHandler))] string labelId)
+    public async Task<DeleteLabelResult> DeleteArticleLabel([ActionParameter] ArticleIdentifier article, [ActionParameter] LocaleIdentifier locale, [ActionParameter, Display("Label ID"), DataSource(typeof(LabelDataHandler))] string labelId)
     {
         var request = new ZendeskRequest($"/api/v2/help_center/{locale.Locale}/articles/{article.ContentId}/labels/{labelId}", Method.Delete);
-        await Client.ExecuteWithHandling(request);
+
+        try
+        {
+            await Client.ExecuteWithHandling(request);
+            return new DeleteLabelResult { IsDeleted = true };
+        }
+        catch (PluginApplicationException ex)
+        {
+            if (ex.Message.Contains("RecordNotFound", StringComparison.OrdinalIgnoreCase))
+            {
+                return new DeleteLabelResult { IsDeleted = false };
+            }
+            throw;
+        }
     }
 }

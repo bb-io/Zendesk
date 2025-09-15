@@ -135,7 +135,7 @@ public class WebhookList : BaseInvocable
             };
         }
 
-        var article = await CreatePublishedArticleResponse(data);
+        var article = await CreatePublishedArticleResponse(data, data.Event.Locale);
 
         if (input.OnlyIfSource != null && input.OnlyIfSource.Value)
         {
@@ -176,9 +176,11 @@ public class WebhookList : BaseInvocable
         return await Client.ExecuteWithHandling<MissingLocales>(request);
     }
 
-    public async Task<ArticlePublishedResponse> CreatePublishedArticleResponse<T>(ArticlePayloadTemplate<T> data)
+    public async Task<ArticlePublishedResponse> CreatePublishedArticleResponse<T>(ArticlePayloadTemplate<T> data, string? locale = null)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/articles/{data.Detail.Id}", Method.Get);
+        var request = !string.IsNullOrWhiteSpace(locale)
+               ? new ZendeskRequest($"/api/v2/help_center/{locale}/articles/{data.Detail.Id}", Method.Get)
+               : new ZendeskRequest($"/api/v2/help_center/articles/{data.Detail.Id}", Method.Get);
         var response = await Client.ExecuteWithHandling<SingleArticle>(request);
         var missingLocales = await GetArticleMissingTranslations(data.Detail.Id);
 
