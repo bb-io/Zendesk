@@ -149,7 +149,7 @@ public class WebhookList : BaseInvocable
                 };
             }
         }
-
+        // compares the labes with main locale and not with the locale that we get in webhook, we need to specify the locale to get 
         if (input.RequiredLabel != null)
         {
             if (!article.Labels.Contains(input.RequiredLabel, StringComparer.OrdinalIgnoreCase))
@@ -179,7 +179,7 @@ public class WebhookList : BaseInvocable
     public async Task<ArticlePublishedResponse> CreatePublishedArticleResponse<T>(ArticlePayloadTemplate<T> data)
     {
         var request = new ZendeskRequest($"/api/v2/help_center/articles/{data.Detail.Id}", Method.Get);
-        var response = await Client.ExecuteWithHandling<SingleArticle>(request);
+        var response = await Client.ExecuteWithHandling<SingleArticle>(request); // if source, it does not check the other locale
         var missingLocales = await GetArticleMissingTranslations(data.Detail.Id);
 
         return new ArticlePublishedResponse
