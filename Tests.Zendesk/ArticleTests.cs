@@ -147,5 +147,17 @@ namespace Tests.Zendesk
             Assert.IsNotNull(result.Labels.Contains("test"));
         }
 
+        [TestMethod]
+        public async Task Delete_label_works()
+        {
+            var actions = new ArticleActions(InvocationContext, FileManager);
+            var response = await actions.DeleteArticleLabel(new ArticleIdentifier { ContentId = "33549894133137" }, new LocaleIdentifier { Locale = "en-us" }, "19613072417041");
+            var result = await actions.GetArticle(new ArticleIdentifier { ContentId = "33549894133137" });
+            Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
+            Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
+
+            Assert.IsNotNull(result);
+        }
+
     }
 }

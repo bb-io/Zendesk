@@ -258,7 +258,7 @@ public class ArticleActions : BaseInvocable
         }
         catch (PluginApplicationException ex)
         {
-            if (ex.Message.Contains("Error: RecordNotFound", StringComparison.OrdinalIgnoreCase))
+            if (ex.Message.Contains("RecordNotFound", StringComparison.OrdinalIgnoreCase))
             {
                 return new DeleteLabelResult { IsDeleted = false };
             }

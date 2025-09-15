@@ -1,7 +1,7 @@
 {
-    "ConnectionDefinition": {
-        "Authorization": "",
-        "api_endpoint": ""
-    },
-    "TestFolder": "TestFiles"
+  "ConnectionDefinition": {
+    "Authorization": "",
+    "api_endpoint": ""
+  },
+  "TestFolder": "TestFiles"
 }
