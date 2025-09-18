@@ -87,9 +87,9 @@ public class OAuth2TokenService : BaseInvocable, IOAuth2TokenService
 
     private Dictionary<string, string> AddExpiresAt(Dictionary<string, string> dictionary) 
     {
-        if (!dictionary.TryGetValue(CredNames.ExpiresIn, out var expiresAtSeconds) || string.IsNullOrEmpty(expiresAtSeconds)) 
+        if (!dictionary.TryGetValue(CredNames.ExpiresIn, out var expiresAtSeconds) || string.IsNullOrEmpty(expiresAtSeconds))
         {
-            throw new KeyNotFoundException("expires_in value not found or empty");
+            expiresAtSeconds = "3600";
         }
 
         var expiresAt = DateTime.UtcNow.AddSeconds(int.Parse(expiresAtSeconds));
