@@ -1,25 +1,27 @@
-﻿using Blackbird.Applications.Sdk.Common;
-using Blackbird.Applications.Sdk.Common.Authentication;
-using Apps.Zendesk.Models.Requests;
-using RestSharp;
-using System.Text;
-using Apps.Zendesk.Models.Responses;
-using Blackbird.Applications.Sdk.Common.Actions;
-using Blackbird.Applications.Sdk.Common.Invocation;
+﻿using Apps.Zendesk.DataSourceHandlers;
+using Apps.Zendesk.Models.Blueprints;
 using Apps.Zendesk.Models.Identifiers;
+using Apps.Zendesk.Models.Requests;
+using Apps.Zendesk.Models.Responses;
 using Apps.Zendesk.Models.Responses.Wrappers;
-using System.Net.Mime;
-using System.Text.RegularExpressions;
-using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
-using Blackbird.Applications.Sdk.Utils.Extensions.Files;
+using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.Sdk.Common.Actions;
+using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Dynamic;
-using Apps.Zendesk.DataSourceHandlers;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Files;
+using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Applications.Sdk.Utils.Extensions.Files;
 using Blackbird.Applications.SDK.Blueprints;
-using Apps.Zendesk.Models.Blueprints;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Blackbird.Filters.Constants;
+using Blackbird.Filters.Extensions;
 using Blackbird.Filters.Transformations;
 using Blackbird.Filters.Xliff.Xliff2;
+using RestSharp;
+using System.Net.Mime;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Apps.Zendesk.Actions;
 
@@ -178,8 +180,25 @@ public class ArticleActions : BaseInvocable
         var request = new ZendeskRequest($"/api/v2/help_center/articles/{input.ContentId}/translations/{input.Locale}", Method.Get);
         var response = await Client.ExecuteWithHandling<SingleTranslation>(request);
 
-        string htmlFile =
-            $"<html><head><title>{response.Translation.Title}</title><meta name=\"{Constants.Constants.BlackbirdReferenceId}\" content=\"{input.ContentId}\"></head><body>{response.Translation.Body}</body></html>";
+        var userRequest = new ZendeskRequest($"/api/v2/users/{response.Translation.UpdatedById}", Method.Get);
+        var userResponse = await Client.ExecuteWithHandling<SingleUser>(userRequest);
+
+        var sb = new StringBuilder();
+
+        var adminUrl = $"{Client.BaseUrl}/knowledge/editor/{input.ContentId}/{input.Locale}";
+
+        sb.Append($"<html lang=\"{input.Locale}\"><head>");
+        sb.Append($"<title data-blackbird-key=\"{input.ContentId}-title\">{response.Translation.Title}</title>");
+        sb.Append($"<meta name=\"{Constants.Constants.BlackbirdReferenceId}\" content=\"{input.ContentId}\">");
+        sb.Append($"<meta name=\"blackbird-ucid\" content=\"{input.ContentId}\">");
+        sb.Append($"<meta name=\"blackbird-content-name\" content=\"{response.Translation.Title}\">");
+        sb.Append($"<meta name=\"blackbird-admin-url\" content=\"{adminUrl}\">");
+        sb.Append($"<meta name=\"blackbird-public-url\" content=\"{response.Translation.HtmlUrl}\">");
+        sb.Append($"<meta name=\"blackbird-system-name\" content=\"Zendesk\">");
+        sb.Append($"<meta name=\"blackbird-system-ref\" content=\"https://www.zendesk.com\">");
+        sb.Append($"</head><body its-rev-tool=\"Zendesk\" its-rev-tool-ref=\"https://www.zendesk.com\" its-rev-person=\"{userResponse.User.Name}\" >{response.Translation.Body}</body></html>");
+
+        string htmlFile = sb.ToString();
 
         var invalidChars = new List<char>();
         invalidChars.AddRange(Path.GetInvalidFileNameChars());
@@ -209,7 +228,7 @@ public class ArticleActions : BaseInvocable
 
     [BlueprintActionDefinition(BlueprintAction.UploadContent)]
     [Action("Upload article", Description ="Updates the translation for an article, creates a new translation if there is none. Takes a translated file (HTML) as input.")]
-    public async Task<Translation> TranslateArticleFromFile([ActionParameter] FileTranslationRequest input)
+    public async Task<TranslationWithFileOutput> TranslateArticleFromFile([ActionParameter] FileTranslationRequest input)
     {
         if (string.IsNullOrWhiteSpace(input.Locale))
         {
@@ -219,9 +238,11 @@ public class ArticleActions : BaseInvocable
         var file = await _fileManagementClient.DownloadAsync(input.Content);
         var html = Encoding.UTF8.GetString(await file.GetByteData());
 
+        Transformation? transformation = null;
         if (Xliff2Serializer.IsXliff2(html))
         {
-            html = Transformation.Parse(html, input.Content.Name).Target().Serialize();
+            transformation = Transformation.Parse(html, input.Content.Name);
+            html = transformation.Target().Serialize();
             if (html == null) throw new PluginMisconfigurationException("XLIFF did not contain any files");
         }
 
@@ -234,8 +255,27 @@ public class ArticleActions : BaseInvocable
 
         var request = ZendeskRequest.CreateTranslationUpsertRequest(isLocaleMissing, $"articles/{articleId}", input.Locale);
         request.AddNewtonJson(converted);
-        var response = await Client.ExecuteWithHandling<SingleTranslation>(request);
-        return response.Translation;
+        var response = await Client.ExecuteWithHandling<TranslationWithFileOutput>(request);
+
+        if (transformation is not null)
+        {
+            var translationResultRequest = new ZendeskRequest($"/api/v2/help_center/articles/{articleId}/translations/{input.Locale}", Method.Get);
+            var translationResult = await Client.ExecuteWithHandling<SingleTranslation>(translationResultRequest);
+
+            transformation.TargetSystemReference.ContentId = articleId;
+            transformation.TargetSystemReference.ContentName = translationResult.Translation.Title;
+            transformation.TargetSystemReference.AdminUrl = $"{Client.BaseUrl}/knowledge/editor/{articleId}/{input.Locale}";
+            transformation.TargetSystemReference.SystemName = "Zendesk";
+            transformation.TargetSystemReference.SystemRef = "https://www.zendesk.com";
+            transformation.TargetLanguage = input.Locale;
+
+            response.Content = await _fileManagementClient.UploadAsync(transformation.Serialize().ToStream(), MediaTypes.Xliff, transformation.XliffFileName);
+        } else
+        {
+            response.Content = input.Content;
+        }
+
+        return response;
     }
 
     [Action("Add label to article", Description = "Add a new label to an article")]

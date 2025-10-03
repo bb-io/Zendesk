@@ -1,15 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Apps.Zendesk.Actions;
+﻿using Apps.Zendesk.Actions;
 using Apps.Zendesk.Models.Blueprints;
 using Apps.Zendesk.Models.Identifiers;
 using Apps.Zendesk.Models.Requests;
 using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Filters.Coders;
+using Blackbird.Filters.Transformations;
 using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using ZendeskTests.Base;
 
 namespace Tests.Zendesk
@@ -77,12 +79,55 @@ namespace Tests.Zendesk
         }
 
         [TestMethod]
+        public async Task DownloadArticle_has_Blacklake_requirements()
+        {
+            var actions = new ArticleActions(InvocationContext, FileManager);
+            var result = await actions.GetArticleAsFile(new DownloadContentInput { ContentId = TestArticleId });
+            Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
+            Assert.IsNotNull(result.Content);
+
+            var contentString = FileManager.ReadOutputAsString(result.Content);
+            var codedContent = (new HtmlContentCoder()).Deserialize(contentString, result.Content.Name);
+
+            Console.WriteLine(contentString);
+            Assert.AreEqual(DefaultLocale, codedContent.Language);
+            Assert.AreEqual(TestArticleId, codedContent.SystemReference.ContentId);
+            Assert.AreEqual($"https://d3v-blackbird.zendesk.com/knowledge/editor/{TestArticleId}/en-us", codedContent.SystemReference.AdminUrl);
+            Assert.AreEqual("Zendesk", codedContent.SystemReference.SystemName);
+            Assert.AreEqual("https://www.zendesk.com", codedContent.SystemReference.SystemRef);
+            Assert.IsNotNull(codedContent.SystemReference.ContentName);
+
+            Console.WriteLine(codedContent.Provenance.Review.Person);
+            Assert.IsNotNull(codedContent.Provenance.Review.Person);
+            Assert.AreEqual("Zendesk", codedContent.Provenance.Review.Tool);
+            Assert.AreEqual("https://www.zendesk.com", codedContent.Provenance.Review.ToolReference);
+
+            Assert.IsTrue(codedContent.TextUnits.Any(x => x.Key is not null));
+        }
+
+        [TestMethod]
         public async Task DownloadArticle_other_locale_works()
         {
             var actions = new ArticleActions(InvocationContext, FileManager);
             var result = await actions.GetArticleAsFile(new DownloadContentInput { ContentId = TestArticleId, Locale = OtherLocale });
             Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
             Assert.IsNotNull(result.Content);
+        }
+
+        [TestMethod]
+        public async Task UploadArticle_from_xliff_works()
+        {
+            var actions = new ArticleActions(InvocationContext, FileManager);
+
+            var fileReference = new FileReference { Name = "Multilingual AI Roundtable 2025 in Malmö!.html.xlf" };
+
+            var result = await actions.TranslateArticleFromFile(new FileTranslationRequest { Locale = OtherLocale, Content = fileReference });
+            Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
+
+            var contentString = FileManager.ReadOutputAsString(result.Content);
+            var transformation = Transformation.Parse(contentString, result.Content.Name);
+
+            Assert.IsTrue(transformation.TargetSystemReference.SystemName == "Zendesk");
         }
 
         [TestMethod]
@@ -94,7 +139,7 @@ namespace Tests.Zendesk
             var uploadResult = await actions.TranslateArticleFromFile(new FileTranslationRequest { Locale = OtherLocale, Content = result.Content });
             Console.WriteLine(JsonConvert.SerializeObject(uploadResult, Formatting.Indented));
 
-            Assert.IsTrue(result.Content.Name.Contains(uploadResult.Title));
+            Assert.IsTrue(result.Content.Name.Contains(uploadResult.Translation.Title));
         }
 
         [TestMethod]
@@ -107,7 +152,7 @@ namespace Tests.Zendesk
             var uploadResult = await actions.TranslateArticleFromFile(new FileTranslationRequest { Locale = NewLocale, Content = result.Content });
             Console.WriteLine(JsonConvert.SerializeObject(uploadResult, Formatting.Indented));
 
-            Assert.IsTrue(result.Content.Name.Contains(uploadResult.Title));
+            Assert.IsTrue(result.Content.Name.Contains(uploadResult.Translation.Title));
         }
 
         [TestMethod]
@@ -120,7 +165,7 @@ namespace Tests.Zendesk
             var uploadResult = await actions.TranslateArticleFromFile(new FileTranslationRequest { Locale = "nl", Content = fileReference });
             Console.WriteLine(JsonConvert.SerializeObject(uploadResult, Formatting.Indented));
 
-            Assert.IsTrue(uploadResult.Id is not null);
+            Assert.IsTrue(uploadResult.Translation.Id is not null);
         }
 
         [TestMethod]
@@ -133,7 +178,7 @@ namespace Tests.Zendesk
             var uploadResult = await actions.TranslateArticleFromFile(new FileTranslationRequest { Locale = "de", Content = fileReference });
             Console.WriteLine(JsonConvert.SerializeObject(uploadResult, Formatting.Indented));
 
-            Assert.IsTrue(uploadResult.Id is not null);
+            Assert.IsTrue(uploadResult.Translation.Id is not null);
         }
 
         [TestMethod]

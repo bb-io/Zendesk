@@ -1,5 +1,6 @@
 ﻿using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using System.Text;
 
 namespace ZendeskTests.Base
 {
@@ -59,6 +60,13 @@ namespace ZendeskTests.Base
             };
 
             return fileReference;
+        }
+
+        public string ReadOutputAsString(FileReference reference)
+        {
+            var path = Path.Combine(outputFolder, reference.Name);
+            Assert.IsTrue(File.Exists(path), $"File not found at: {path}");
+            return File.ReadAllText(path, Encoding.UTF8)!;
         }
     }
 }
