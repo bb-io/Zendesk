@@ -44,4 +44,8 @@ public class Translation
     [Display("Updated at")]
     [JsonProperty("updated_at")]
     public DateTime UpdatedAt { get; set; }
+
+    [DefinitionIgnore]
+    [JsonProperty("updated_by_id")]
+    public long UpdatedById { get; set; }
 }

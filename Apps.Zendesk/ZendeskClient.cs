@@ -21,6 +21,8 @@ public class ZendeskClient : RestClient
 
     private InvocationContext Context { get; }
 
+    public string BaseUrl { get; set; }
+
     public ZendeskClient(InvocationContext invocationContext) :
         base(new RestClientOptions()
         { ThrowOnAnyError = false, BaseUrl = GetUri(invocationContext.AuthenticationCredentialsProviders) })
@@ -28,6 +30,7 @@ public class ZendeskClient : RestClient
         Context = invocationContext;
         this.AddDefaultHeader("Authorization", invocationContext.AuthenticationCredentialsProviders.First(p => p.KeyName == CredNames.AccessToken).Value);
         this.AddDefaultHeader("accept", "*/*");
+        BaseUrl = GetUri(invocationContext.AuthenticationCredentialsProviders).ToString().TrimEnd('/');
     }
 
     private static Uri GetUri(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders)

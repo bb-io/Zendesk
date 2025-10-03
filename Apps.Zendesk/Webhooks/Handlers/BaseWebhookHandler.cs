@@ -31,7 +31,12 @@ public class BaseWebhookHandler(InvocationContext invocationContext, string subE
                 }
             }
         });
-        await Client.ExecuteAsync(request);
+        
+        var response = await Client.ExecuteAsync(request);
+        if (response.IsSuccessStatusCode == false)
+        {
+            throw new Exception($"Failed to create webhook. Status code: {response.StatusCode}, Content: {response.Content}");
+        }
     }
 
     public async Task UnsubscribeAsync(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProvider, Dictionary<string, string> values)
