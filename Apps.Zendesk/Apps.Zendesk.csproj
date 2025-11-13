@@ -4,7 +4,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Product>Zendesk</Product>
-    <Version>1.2.15</Version>
+    <Version>1.2.16</Version>
     <Description>Zendesk makes customer service better</Description>
     <AssemblyName>Apps.Zendesk</AssemblyName>
   </PropertyGroup>
