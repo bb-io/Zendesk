@@ -25,7 +25,7 @@ public class ZendeskClient : RestClient
 
     public ZendeskClient(InvocationContext invocationContext) :
         base(new RestClientOptions()
-        { ThrowOnAnyError = false, BaseUrl = GetUri(invocationContext.AuthenticationCredentialsProviders) })
+        { ThrowOnAnyError = false, BaseUrl = GetUri(invocationContext.AuthenticationCredentialsProviders), MaxTimeout = 600000 })
     {
         Context = invocationContext;
         this.AddDefaultHeader("Authorization", invocationContext.AuthenticationCredentialsProviders.First(p => p.KeyName == CredNames.AccessToken).Value);
