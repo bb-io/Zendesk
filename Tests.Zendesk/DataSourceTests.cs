@@ -43,7 +43,7 @@ namespace Tests.Zendesk
             Console.WriteLine($"Total: {result.Count()}");
             foreach (var item in result)
             {
-                Console.WriteLine($"{item.Value}: {item.Key}");
+                Console.WriteLine($"{item.Value}: {item.DisplayName}");
             }
 
             Assert.IsTrue(result.Count() > 0);
