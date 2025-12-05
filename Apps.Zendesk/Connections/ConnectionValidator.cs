@@ -1,10 +1,12 @@
-﻿using Blackbird.Applications.Sdk.Common.Authentication;
+﻿using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Connections;
+using Blackbird.Applications.Sdk.Common.Invocation;
 using RestSharp;
 
 namespace Apps.Zendesk.Connections;
 
-public class ConnectionValidator : IConnectionValidator
+public class ConnectionValidator(InvocationContext invocationContext) : BaseInvocable(invocationContext), IConnectionValidator
 {
     public async ValueTask<ConnectionValidationResponse> ValidateConnection(
         IEnumerable<AuthenticationCredentialsProvider> authProviders, CancellationToken cancellationToken)
@@ -15,7 +17,6 @@ public class ConnectionValidator : IConnectionValidator
         try
         {
             await client.ExecuteWithHandling(request);
-
             return new()
             {
                 IsValid = true
@@ -23,6 +24,7 @@ public class ConnectionValidator : IConnectionValidator
         }
         catch (Exception ex)
         {
+            InvocationContext.Logger?.LogError($"[ZendeskConnectionValidator] Connection validation failed ({ex.GetType()}) with the message: {ex.Message}", []);
             return new()
             {
                 IsValid = false,

@@ -7,11 +7,9 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.Zendesk.Auth.OAuth2;
 
-public class OAuth2TokenService : BaseInvocable, IOAuth2TokenService 
+public class OAuth2TokenService(InvocationContext invocationContext)
+    : BaseInvocable(invocationContext), IOAuth2TokenService
 {
-    public OAuth2TokenService(InvocationContext invocationContext) : base(invocationContext) 
-    { }
-
     public bool IsRefreshToken(Dictionary<string, string> values) 
     {
         var expiresAt = DateTime.Parse(values[CredNames.ExpiresAt]);
@@ -20,21 +18,30 @@ public class OAuth2TokenService : BaseInvocable, IOAuth2TokenService
 
     public async Task<Dictionary<string, string>> RefreshToken(Dictionary<string, string> values, CancellationToken cancellationToken) 
     {
-        string tokenUrl = GetTokenUrl(values);
-
-        var parameters = new Dictionary<string, string> 
+        try
         {
-            { "grant_type", "refresh_token" },
-            { "client_id", ApplicationConstants.ClientId },
-            { "client_secret", ApplicationConstants.ClientSecret },
-            { "refresh_token", values[CredNames.RefreshToken] },
-            { "expires_in", "3600" }
-        };
+            string tokenUrl = GetTokenUrl(values);
 
-        var tokenDto = await ExecuteTokenRequest(parameters, tokenUrl, cancellationToken);
-        var dictionary = TokenDtoToDictionary(tokenDto);
-        AddExpiresAt(dictionary);
-        return dictionary;
+            var parameters = new Dictionary<string, string> 
+            {
+                { "grant_type", "refresh_token" },
+                { "client_id", ApplicationConstants.ClientId },
+                { "client_secret", ApplicationConstants.ClientSecret },
+                { "refresh_token", values[CredNames.RefreshToken] },
+                { "expires_in", "3600" }
+            };
+
+            var tokenDto = await ExecuteTokenRequest(parameters, tokenUrl, cancellationToken);
+            var dictionary = TokenDtoToDictionary(tokenDto);
+            AddExpiresAt(dictionary);
+            return dictionary;
+        }
+        catch (Exception e)
+        {
+            var valuesString = string.Join(", ", values.Select(kv => $"{kv.Key}: {kv.Value}"));
+            invocationContext.Logger?.LogError($"[ZendeskOAuth2TokenService] Error ({e.GetType()}) refreshing token: {e.Message}. Values: {valuesString}", []);
+            throw;
+        }
     }
 
     public async Task<Dictionary<string, string?>> RequestToken(
