@@ -10,7 +10,7 @@ namespace Tests.Zendesk
         [TestMethod]
         public async Task ValidatesCorrectConnection()
         {
-            var validator = new ConnectionValidator();
+            var validator = new ConnectionValidator(InvocationContext);
 
             var result = await validator.ValidateConnection(Creds, CancellationToken.None);
             Assert.IsTrue(result.IsValid);
@@ -19,7 +19,7 @@ namespace Tests.Zendesk
         [TestMethod]
         public async Task DoesNotValidateIncorrectConnection()
         {
-            var validator = new ConnectionValidator();
+            var validator = new ConnectionValidator(InvocationContext);
 
             var newCreds = Creds.Select(x => new AuthenticationCredentialsProvider(x.KeyName, x.Value + "_incorrect"));
             var result = await validator.ValidateConnection(newCreds, CancellationToken.None);
