@@ -1,4 +1,5 @@
-﻿using Blackbird.Applications.Sdk.Common;
+﻿using Apps.Zendesk.Constants;
+using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Microsoft.AspNetCore.WebUtilities;
@@ -11,7 +12,7 @@ public class OAuth2AuthorizeService(InvocationContext invocationContext)
     public string GetAuthorizationUrl(Dictionary<string, string> values)
     {
         string bridgeOauthUrl = $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/oauth";
-        string oauthUrl = $"{new Uri(values["api_endpoint"]).GetLeftPart(UriPartial.Authority).TrimEnd('/')}/oauth/authorizations/new";
+        string oauthUrl = $"{new Uri(values[CredNames.BaseUrl]).GetLeftPart(UriPartial.Authority).TrimEnd('/')}/oauth/authorizations/new";
         var parameters = new Dictionary<string, string>
         {
             { "client_id", ApplicationConstants.ClientId},

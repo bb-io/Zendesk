@@ -16,7 +16,7 @@ public class ConnectionValidator(InvocationContext invocationContext) : BaseInvo
 
         try
         {
-            await client.ExecuteWithHandling(request);
+            var response = await client.ExecuteWithHandling(request);
             return new()
             {
                 IsValid = true

@@ -10,7 +10,7 @@ public class OAuth2ConnectionDefinition : IConnectionDefinition
     [
         new ConnectionPropertyGroup
         {
-            Name = "OAuth2",
+            Name = ConnectionTypes.OAuth2,
             AuthenticationType = ConnectionAuthenticationType.OAuth2,
             ConnectionProperties =
             [
@@ -20,14 +20,41 @@ public class OAuth2ConnectionDefinition : IConnectionDefinition
                 }
             ]
         },
+        new ConnectionPropertyGroup
+        {
+            Name = ConnectionTypes.ApiToken,
+            AuthenticationType = ConnectionAuthenticationType.Undefined,
+            ConnectionProperties =
+            [
+                new ConnectionProperty(CredNames.BaseUrl)
+                {
+                    DisplayName = "Base URL"
+                },
+                new ConnectionProperty(CredNames.Email)
+                {
+                    DisplayName = "Email address",
+                    Description = "Your Zendesk account email address"
+                },
+                new ConnectionProperty(CredNames.AccessToken)
+                {
+                    DisplayName = "API Token",
+                    Description = "Zendesk API token. You can create it in your Zendesk account settings.",
+                    Sensitive = true
+                }
+            ]
+        }
     ];
 
     public IEnumerable<AuthenticationCredentialsProvider> CreateAuthorizationCredentialsProviders(Dictionary<string, string> values)
     {
-        var token = values.First(v => v.Key == "access_token");
-        yield return new AuthenticationCredentialsProvider(CredNames.AccessToken, $"Bearer {token.Value}");
-
-        var url = new Uri(values.First(v => v.Key == CredNames.BaseUrl).Value).GetLeftPart(UriPartial.Authority);
-        yield return new AuthenticationCredentialsProvider(CredNames.BaseUrl, url);
+        var credentials = values.Select(x => new AuthenticationCredentialsProvider(x.Key, x.Value)).ToList();
+        var connectionType = values[nameof(ConnectionPropertyGroup)] switch
+        {
+            var ct when ConnectionTypes.SupportedConnectionTypes.Contains(ct) => ct,
+            _ => throw new Exception($"Unknown connection type: {values[nameof(ConnectionPropertyGroup)]}")
+        };
+        
+        credentials.Add(new AuthenticationCredentialsProvider(CredNames.ConnectionType, connectionType));
+        return credentials;
     }
 }
