@@ -30,6 +30,11 @@ public class OAuth2ConnectionDefinition : IConnectionDefinition
                 {
                     DisplayName = "Base URL"
                 },
+                new ConnectionProperty(CredNames.Email)
+                {
+                    DisplayName = "Email address",
+                    Description = "Your Zendesk account email address"
+                },
                 new ConnectionProperty(CredNames.AccessToken)
                 {
                     DisplayName = "API Token",

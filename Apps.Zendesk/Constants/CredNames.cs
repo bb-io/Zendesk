@@ -8,4 +8,5 @@ public class CredNames
     public const string ExpiresAt = "expires_at";
     public const string ExpiresIn = "expires_in";
     public const string ConnectionType = "ConnectionType";
+    public const string Email = "email";
 }

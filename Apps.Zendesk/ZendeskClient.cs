@@ -29,16 +29,29 @@ public class ZendeskClient : RestClient
     {
         Context = invocationContext;
         
-        var accessToken = invocationContext.AuthenticationCredentialsProviders
-            .FirstOrDefault(p => p.KeyName == CredNames.AccessToken)?.Value;
         var connectionType = invocationContext.AuthenticationCredentialsProviders
             .FirstOrDefault(p => p.KeyName == CredNames.ConnectionType)?.Value;
-        if (connectionType != ConnectionTypes.ApiToken)
+        
+        string authorizationHeader;
+        if (connectionType == ConnectionTypes.ApiToken)
         {
-            accessToken = $"Bearer {accessToken}";
+            var email = invocationContext.AuthenticationCredentialsProviders
+                .FirstOrDefault(p => p.KeyName == CredNames.Email)?.Value;
+            var apiToken = invocationContext.AuthenticationCredentialsProviders
+                .FirstOrDefault(p => p.KeyName == CredNames.AccessToken)?.Value;
+            
+            var credentials = $"{email}/token:{apiToken}";
+            var encodedCredentials = Convert.ToBase64String(Encoding.UTF8.GetBytes(credentials));
+            authorizationHeader = $"Basic {encodedCredentials}";
+        }
+        else
+        {
+            var accessToken = invocationContext.AuthenticationCredentialsProviders
+                .FirstOrDefault(p => p.KeyName == CredNames.AccessToken)?.Value;
+            authorizationHeader = $"Bearer {accessToken}";
         }
         
-        this.AddDefaultHeader("Authorization", accessToken);
+        this.AddDefaultHeader("Authorization", authorizationHeader);
         this.AddDefaultHeader("accept", "*/*");
         BaseUrl = GetUri(invocationContext.AuthenticationCredentialsProviders).ToString().TrimEnd('/');
     }

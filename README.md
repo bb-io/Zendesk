@@ -41,7 +41,8 @@ Our app implements 2 types of authentication: OAuth 2.0 and API Token. Choose wh
 2. Click _Add Connection_.
 3. Name your connection for future reference e.g. 'My client'.
 4. Fill in the Base URL to the Zendesk instance you want to connect to. The base URL is of shape `https://<instance name>.zendesk.com`. You can usually copy this part of the URL when you are logged into your Zendesk instance. Note: for different brands see disclaimer below.
-5. Go to your Zendesk instance and navigate to *Zendesk Admin Center > Apps and integrations > APIs > API tokens* and create a new API token.
+5. Fill `Email` with the email address of the Zendesk user you want to connect with.
+6. Go to your Zendesk instance and navigate to *Zendesk Admin Center > Apps and integrations > APIs > API tokens* and create a new API token.
 6. Copy the API token and paste it into the appropriate field in Blackbird.
 7. Click _Connect_.
 8. Confirm that the connection has appeared and the status is _Connected_.
