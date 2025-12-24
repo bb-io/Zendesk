@@ -2,7 +2,7 @@
 
 public class ConnectionTypes
 {
-    public const string OAuth2 = "OAuth 2.0";
+    public const string OAuth2 = "OAuth2";
     
     public const string ApiToken = "API token";
     

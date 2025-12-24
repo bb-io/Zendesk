@@ -33,7 +33,7 @@ public class ZendeskClient : RestClient
             .FirstOrDefault(p => p.KeyName == CredNames.AccessToken)?.Value;
         var connectionType = invocationContext.AuthenticationCredentialsProviders
             .FirstOrDefault(p => p.KeyName == CredNames.ConnectionType)?.Value;
-        if (connectionType == ConnectionTypes.OAuth2)
+        if (connectionType != ConnectionTypes.ApiToken)
         {
             accessToken = $"Bearer {accessToken}";
         }
