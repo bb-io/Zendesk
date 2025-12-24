@@ -28,7 +28,17 @@ public class ZendeskClient : RestClient
         { ThrowOnAnyError = false, BaseUrl = GetUri(invocationContext.AuthenticationCredentialsProviders), MaxTimeout = 600000 })
     {
         Context = invocationContext;
-        this.AddDefaultHeader("Authorization", invocationContext.AuthenticationCredentialsProviders.First(p => p.KeyName == CredNames.AccessToken).Value);
+        
+        var accessToken = invocationContext.AuthenticationCredentialsProviders
+            .FirstOrDefault(p => p.KeyName == CredNames.AccessToken)?.Value;
+        var connectionType = invocationContext.AuthenticationCredentialsProviders
+            .FirstOrDefault(p => p.KeyName == CredNames.ConnectionType)?.Value;
+        if (connectionType == ConnectionTypes.OAuth2)
+        {
+            accessToken = $"Bearer {accessToken}";
+        }
+        
+        this.AddDefaultHeader("Authorization", accessToken);
         this.AddDefaultHeader("accept", "*/*");
         BaseUrl = GetUri(invocationContext.AuthenticationCredentialsProviders).ToString().TrimEnd('/');
     }

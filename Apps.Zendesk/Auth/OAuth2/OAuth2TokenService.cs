@@ -11,7 +11,6 @@ public class OAuth2TokenService(InvocationContext invocationContext)
     : BaseInvocable(invocationContext), IOAuth2TokenService
 {
     private const int TokenExpirationBufferMinutes = 5;
-    private const int DefaultTokenExpirationSeconds = 3600;
     private readonly string _correlationId = Guid.NewGuid().ToString();
 
     public bool IsRefreshToken(Dictionary<string, string> values) 
@@ -83,7 +82,6 @@ public class OAuth2TokenService(InvocationContext invocationContext)
             var redirectUri = $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/AuthorizationCode";
             
             LogInfo($"Token URL: {tokenUrl}, Redirect URI: {redirectUri}");
-
             var request = new OAuth2TokenRequest
             {
                 GrantType = "authorization_code",
@@ -140,7 +138,7 @@ public class OAuth2TokenService(InvocationContext invocationContext)
 
     private string GetTokenUrl(Dictionary<string, string> values) 
     {
-        if (!values.TryGetValue("api_endpoint", out var endpoint) || string.IsNullOrEmpty(endpoint)) 
+        if (!values.TryGetValue(CredNames.BaseUrl, out var endpoint) || string.IsNullOrEmpty(endpoint)) 
         {
             throw new InvalidOperationException("API endpoint not found in connection values");
         }
@@ -154,13 +152,13 @@ public class OAuth2TokenService(InvocationContext invocationContext)
 
     private void LogInfo(string message)
     {
-        invocationContext.Logger?.LogInformation(
+        InvocationContext.Logger?.LogInformation(
             $"[ZendeskOAuth2] [{_correlationId}] {message}", []);
     }
 
     private void LogWarning(string message)
     {
-        invocationContext.Logger?.LogWarning(
+        InvocationContext.Logger?.LogWarning(
             $"[ZendeskOAuth2] [{_correlationId}] {message}", []);
     }
 
@@ -170,7 +168,7 @@ public class OAuth2TokenService(InvocationContext invocationContext)
             ? $"[ZendeskOAuth2] [{_correlationId}] {message} | Exception: {exception.GetType().Name}"
             : $"[ZendeskOAuth2] [{_correlationId}] {message}";
         
-        invocationContext.Logger?.LogError(logMessage, []);
+        InvocationContext.Logger?.LogError(logMessage, []);
     }
 
     #endregion
