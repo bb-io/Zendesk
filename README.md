@@ -17,6 +17,10 @@ Before you can connect you need to make sure that:
 
 ## Connecting
 
+Our app implements 2 types of authentication: OAuth 2.0 and API Token. Choose whatever suits your needs but API token is usually the easiest to setup and more stable in the long run.
+
+### OAuth 2.0 authentication
+
 1. Navigate to apps and search for Zendesk.
 2. Click _Add Connection_.
 3. Name your connection for future reference e.g. 'My client'.
@@ -30,6 +34,17 @@ Before you can connect you need to make sure that:
 > **Connecting to different brands**: If your Zendesk has multiple brands, you need to create a different connection for each separate brand. Brands are distinct by their base URL. You can find the base URL by going to *Settings > Account > Brand management > Brands* and viewing the *Subdomain* attribute of each brand. Use the Subdomain attribute in the Base URL connection input.
 
 ![1738163882548](image/README/1738163882548.png)
+
+### API Token authentication
+
+1. Navigate to apps and search for Zendesk.
+2. Click _Add Connection_.
+3. Name your connection for future reference e.g. 'My client'.
+4. Fill in the Base URL to the Zendesk instance you want to connect to. The base URL is of shape `https://<instance name>.zendesk.com`. You can usually copy this part of the URL when you are logged into your Zendesk instance. Note: for different brands see disclaimer below.
+5. Go to your Zendesk instance and navigate to *Zendesk Admin Center > Apps and integrations > APIs > API tokens* and create a new API token.
+6. Copy the API token and paste it into the appropriate field in Blackbird.
+7. Click _Connect_.
+8. Confirm that the connection has appeared and the status is _Connected_.
 
 ## Actions
 

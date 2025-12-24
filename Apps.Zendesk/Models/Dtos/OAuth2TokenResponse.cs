@@ -2,6 +2,8 @@ namespace Apps.Zendesk.Models.Dtos;
 
 internal class OAuth2TokenResponse
 {
+    private const int DefaultTokenExpirationSeconds = 3600;
+
     public string AccessToken { get; init; } = null!;
     public string? RefreshToken { get; init; }
     public string? TokenType { get; init; }
@@ -26,7 +28,7 @@ internal class OAuth2TokenResponse
 
     public static OAuth2TokenResponse FromTokenDto(TokenDto tokenDto)
     {
-        var expiresIn = tokenDto.ExpiresIn ?? 3600;
+        var expiresIn = tokenDto.ExpiresIn ?? DefaultTokenExpirationSeconds;
         
         return new OAuth2TokenResponse
         {
