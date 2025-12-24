@@ -10,36 +10,61 @@ namespace Apps.Zendesk.Auth.OAuth2;
 public class OAuth2TokenService(InvocationContext invocationContext)
     : BaseInvocable(invocationContext), IOAuth2TokenService
 {
+    private const int TokenExpirationBufferMinutes = 5;
+    private const int DefaultTokenExpirationSeconds = 3600;
+    private readonly string _correlationId = Guid.NewGuid().ToString();
+
     public bool IsRefreshToken(Dictionary<string, string> values) 
     {
-        var expiresAt = DateTime.Parse(values[CredNames.ExpiresAt]);
-        return DateTime.UtcNow > expiresAt;
+        if (!values.TryGetValue(CredNames.ExpiresAt, out var expiresAtString) || string.IsNullOrEmpty(expiresAtString))
+        {
+            LogInfo("Token expiration info not found, refresh required");
+            return true;
+        }
+
+        if (!DateTime.TryParse(expiresAtString, out var expiresAt))
+        {
+            LogWarning($"Failed to parse expires_at: {expiresAtString}");
+            return true;
+        }
+
+        var shouldRefresh = DateTime.UtcNow.AddMinutes(TokenExpirationBufferMinutes) > expiresAt;
+        var timeUntilExpiration = expiresAt - DateTime.UtcNow;
+        LogInfo($"Token expires at {expiresAt:O}, time until expiration: {timeUntilExpiration:hh\\:mm\\:ss}, refresh required: {shouldRefresh}");
+        
+        return shouldRefresh;
     }
 
     public async Task<Dictionary<string, string>> RefreshToken(Dictionary<string, string> values, CancellationToken cancellationToken) 
     {
+        LogInfo("Starting token refresh");
+        
         try
         {
-            string tokenUrl = GetTokenUrl(values);
-
-            var parameters = new Dictionary<string, string> 
+            if (!values.TryGetValue(CredNames.RefreshToken, out var refreshToken) || string.IsNullOrEmpty(refreshToken))
             {
-                { "grant_type", "refresh_token" },
-                { "client_id", ApplicationConstants.ClientId },
-                { "client_secret", ApplicationConstants.ClientSecret },
-                { "refresh_token", values[CredNames.RefreshToken] },
-                { "expires_in", "3600" }
+                throw new InvalidOperationException("Refresh token not found in credentials");
+            }
+
+            var tokenUrl = GetTokenUrl(values);
+            LogInfo($"Token URL: {tokenUrl}");
+
+            var request = new OAuth2TokenRequest
+            {
+                GrantType = "refresh_token",
+                ClientId = ApplicationConstants.ClientId,
+                ClientSecret = ApplicationConstants.ClientSecret,
+                RefreshToken = refreshToken
             };
 
-            var tokenDto = await ExecuteTokenRequest(parameters, tokenUrl, cancellationToken);
-            var dictionary = TokenDtoToDictionary(tokenDto);
-            AddExpiresAt(dictionary);
-            return dictionary;
+            var tokenResponse = await ExecuteTokenRequestAsync(request, tokenUrl, cancellationToken);
+            LogInfo($"Token refreshed successfully, expires at: {tokenResponse.ExpiresAt:O}");
+            
+            return tokenResponse.ToDictionary();
         }
         catch (Exception e)
         {
-            var valuesString = string.Join(", ", values.Select(kv => $"{kv.Key}: {kv.Value}"));
-            invocationContext.Logger?.LogError($"[ZendeskOAuth2TokenService] Error ({e.GetType()}) refreshing token: {e.Message}. Values: {valuesString}", []);
+            LogError($"Failed to refresh token: {e.Message}", e);
             throw;
         }
     }
@@ -50,24 +75,35 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         Dictionary<string, string> values, 
         CancellationToken cancellationToken)
     {
-        string tokenUrl = GetTokenUrl(values);
-        string redirectUri = $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/AuthorizationCode";
-
-        var bodyParameters = new Dictionary<string, string> 
+        LogInfo($"Requesting initial token with state: {state}");
+        
+        try
         {
-            { "grant_type", "authorization_code" },
-            { "client_id", ApplicationConstants.ClientId },
-            { "client_secret", ApplicationConstants.ClientSecret },
-            { "redirect_uri", redirectUri },
-            { "scope", ApplicationConstants.Scope },
-            { "code", code },
-            { "expires_in", "3600" }
-        };
+            var tokenUrl = GetTokenUrl(values);
+            var redirectUri = $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/AuthorizationCode";
+            
+            LogInfo($"Token URL: {tokenUrl}, Redirect URI: {redirectUri}");
 
-        var tokenDto = await ExecuteTokenRequest(bodyParameters, tokenUrl, cancellationToken);
-        var dictionary = TokenDtoToDictionary(tokenDto);
-        AddExpiresAt(dictionary);
-        return dictionary;
+            var request = new OAuth2TokenRequest
+            {
+                GrantType = "authorization_code",
+                ClientId = ApplicationConstants.ClientId,
+                ClientSecret = ApplicationConstants.ClientSecret,
+                RedirectUri = redirectUri,
+                Scope = ApplicationConstants.Scope,
+                Code = code
+            };
+
+            var tokenResponse = await ExecuteTokenRequestAsync(request, tokenUrl, cancellationToken);
+            LogInfo($"Token requested successfully, expires at: {tokenResponse.ExpiresAt:O}");
+            
+            return tokenResponse.ToDictionary();
+        }
+        catch (Exception e)
+        {
+            LogError($"Failed to request token: {e.Message}", e);
+            throw;
+        }
     }
 
     public Task RevokeToken(Dictionary<string, string> values) 
@@ -75,40 +111,38 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         throw new NotImplementedException();
     }
 
-    private async Task<TokenDto> ExecuteTokenRequest(Dictionary<string, string> parameters,
+    private async Task<OAuth2TokenResponse> ExecuteTokenRequestAsync(
+        OAuth2TokenRequest request,
         string tokenUrl,
         CancellationToken cancellationToken) 
     {
+        LogInfo($"Executing token request to {tokenUrl}");
+        
         using var client = new HttpClient();
-        using var content = new FormUrlEncodedContent(parameters);
-        using var response = await client.PostAsync(tokenUrl, content, cancellationToken);
-
+        using var content = new FormUrlEncodedContent(request.ToFormData());
+        
+        var response = await client.PostAsync(tokenUrl, content, cancellationToken);
         var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+
         if (!response.IsSuccessStatusCode) 
         {
-            throw new Exception($"Error requesting token: {response.StatusCode} - {responseContent}");
+            LogError($"Token request failed with status {response.StatusCode}: {responseContent}");
+            throw new HttpRequestException($"Token request failed: {response.StatusCode} - {responseContent}");
         }
 
-        return JsonConvert.DeserializeObject<TokenDto>(responseContent!)!;
-    }
+        LogInfo("Token request successful, deserializing response");
+        
+        var tokenDto = JsonConvert.DeserializeObject<TokenDto>(responseContent)
+            ?? throw new InvalidOperationException("Failed to deserialize token response");
 
-    private Dictionary<string, string> AddExpiresAt(Dictionary<string, string> dictionary) 
-    {
-        if (!dictionary.TryGetValue(CredNames.ExpiresIn, out var expiresAtSeconds) || string.IsNullOrEmpty(expiresAtSeconds))
-        {
-            expiresAtSeconds = "3600";
-        }
-
-        var expiresAt = DateTime.UtcNow.AddSeconds(int.Parse(expiresAtSeconds));
-        dictionary[CredNames.ExpiresAt] = expiresAt.ToString();
-        return dictionary;
+        return OAuth2TokenResponse.FromTokenDto(tokenDto);
     }
 
     private string GetTokenUrl(Dictionary<string, string> values) 
     {
         if (!values.TryGetValue("api_endpoint", out var endpoint) || string.IsNullOrEmpty(endpoint)) 
         {
-            throw new KeyNotFoundException("api_endpoint not found or empty");
+            throw new InvalidOperationException("API endpoint not found in connection values");
         }
 
         var uri = new Uri(endpoint);
@@ -116,25 +150,28 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         return $"{baseUrl}/oauth/tokens";
     }
 
-    private Dictionary<string, string?> TokenDtoToDictionary(TokenDto tokenDto) 
+    #region Logging Methods
+
+    private void LogInfo(string message)
     {
-        var result = new Dictionary<string, string?> 
-        {
-            { "access_token", tokenDto.AccessToken },
-            { "refresh_token", tokenDto.RefreshToken },
-            { "token_type", tokenDto.TokenType },
-            { "scope", tokenDto.Scope },
-            { "refresh_token_expires_in", tokenDto.RefreshTokenExpiresIn?.ToString() }
-        };
-
-        if (tokenDto.AdditionalData != null) 
-        {
-            foreach (var kv in tokenDto.AdditionalData) 
-            {
-                result[kv.Key] = kv.Value.ToString();
-            }
-        }
-
-        return result;
+        invocationContext.Logger?.LogInformation(
+            $"[ZendeskOAuth2] [{_correlationId}] {message}", []);
     }
+
+    private void LogWarning(string message)
+    {
+        invocationContext.Logger?.LogWarning(
+            $"[ZendeskOAuth2] [{_correlationId}] {message}", []);
+    }
+
+    private void LogError(string message, Exception? exception = null)
+    {
+        var logMessage = exception != null 
+            ? $"[ZendeskOAuth2] [{_correlationId}] {message} | Exception: {exception.GetType().Name}"
+            : $"[ZendeskOAuth2] [{_correlationId}] {message}";
+        
+        invocationContext.Logger?.LogError(logMessage, []);
+    }
+
+    #endregion
 }
