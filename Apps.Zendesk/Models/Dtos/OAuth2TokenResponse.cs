@@ -31,9 +31,11 @@ public class OAuth2TokenResponse
 
     public static OAuth2TokenResponse FromTokenDto(TokenDto tokenDto)
     {
-        DateTime? expiresAt = tokenDto.ExpiresIn.HasValue
-            ? DateTime.UtcNow.AddSeconds(tokenDto.ExpiresIn.Value)
-            : null;
+        DateTime? expiresAt;
+        if (tokenDto.ExpiresIn == null)
+            expiresAt = DateTime.UtcNow.AddSeconds(tokenDto.RefreshTokenExpiresIn!.Value);
+        else
+            expiresAt = DateTime.UtcNow.AddSeconds(tokenDto.ExpiresIn.Value);
 
         return new OAuth2TokenResponse
         {

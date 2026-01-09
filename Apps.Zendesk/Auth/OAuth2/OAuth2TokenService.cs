@@ -61,11 +61,8 @@ public class OAuth2TokenService(InvocationContext invocationContext)
             };
 
             var tokenResponse = await ExecuteTokenRequestAsync(request, tokenUrl, cancellationToken);
-            LogInfo($"Token refreshed successfully, expires at: {tokenResponse.ExpiresAt:O}");
-            
-            var responseValues = tokenResponse.ToDictionary();
-            NormalizeExpiration(responseValues);
-            return responseValues;
+            LogInfo($"Token refreshed successfully, expires at: {tokenResponse.ExpiresAt:O}");            
+            return tokenResponse.ToDictionary();
         }
         catch (Exception e)
         {
@@ -74,7 +71,7 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         }
     }
 
-    public async Task<Dictionary<string, string?>> RequestToken(
+    public async Task<Dictionary<string, string>> RequestToken(
         string state, 
         string code, 
         Dictionary<string, string> values, 
@@ -99,11 +96,8 @@ public class OAuth2TokenService(InvocationContext invocationContext)
             };
 
             var tokenResponse = await ExecuteTokenRequestAsync(request, tokenUrl, cancellationToken);
-            LogInfo($"Token requested successfully, expires at: {tokenResponse.ExpiresAt:O}");
-            
-            var responseValues = tokenResponse.ToDictionary();
-            NormalizeExpiration(responseValues);
-            return responseValues;
+            LogInfo($"Token requested successfully, expires at: {tokenResponse.ExpiresAt:O}");            
+            return tokenResponse.ToDictionary();
         }
         catch (Exception e)
         {
@@ -154,19 +148,6 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         var uri = new Uri(endpoint);
         var baseUrl = uri.GetLeftPart(UriPartial.Authority).TrimEnd('/');
         return $"{baseUrl}/oauth/tokens";
-    }
-
-    private static void NormalizeExpiration(Dictionary<string, string> values)
-    {
-        if (values.ContainsKey(CredNames.ExpiresAt)) 
-            return;
-
-        if (values.TryGetValue("refresh_token_expires_in", out var expiresInString) &&
-            long.TryParse(expiresInString, out var expiresInSeconds))
-        {
-            var expirationDate = DateTime.UtcNow.AddSeconds(expiresInSeconds);
-            values[CredNames.ExpiresAt] = expirationDate.ToString("o");
-        }
     }
 
     #region Logging Methods
