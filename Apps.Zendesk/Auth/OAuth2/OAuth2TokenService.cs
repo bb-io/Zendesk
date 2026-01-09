@@ -102,7 +102,8 @@ public class OAuth2TokenService(InvocationContext invocationContext)
 
             var tokenResponse = await ExecuteTokenRequestAsync(request, tokenUrl, cancellationToken);
             LogInfo($"Token requested successfully, expires at: {tokenResponse.ExpiresAt:O}");
-            
+            WebhookLogger.Log(tokenResponse);
+            WebhookLogger.Log(tokenResponse.ToDictionary());
             return tokenResponse.ToDictionary();
         }
         catch (Exception e)
@@ -140,6 +141,7 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         
         var tokenDto = JsonConvert.DeserializeObject<TokenDto>(responseContent)
             ?? throw new InvalidOperationException("Failed to deserialize token response");
+        WebhookLogger.Log(responseContent);
 
         return OAuth2TokenResponse.FromTokenDto(tokenDto);
     }
