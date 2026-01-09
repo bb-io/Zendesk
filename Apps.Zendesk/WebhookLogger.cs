@@ -1,18 +1,31 @@
 ﻿using System.Text;
-using System.Text.Json;
+using Newtonsoft.Json;
 
 namespace Apps.Zendesk;
 
 public static class WebhookLogger
 {
+    private static readonly HttpClient client = new HttpClient();
+
     public static void Log(string url, object body)
     {
-        using var client = new HttpClient();
+        try
+        {
+            var json = JsonConvert.SerializeObject(body);
 
-        var json = JsonSerializer.Serialize(body);
-        using var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            using var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        using var response = client.Send(request);
+            client.Send(request);
+        }
+        catch (Exception ex)
+        {
+            var json = JsonConvert.SerializeObject(ex.Message);
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            client.Send(request);
+        }
     }
 }

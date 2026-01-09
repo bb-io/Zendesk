@@ -1,6 +1,6 @@
 namespace Apps.Zendesk.Models.Dtos;
 
-internal class OAuth2TokenResponse
+public class OAuth2TokenResponse
 {
     private const int DefaultTokenExpirationSeconds = 3600;
 
