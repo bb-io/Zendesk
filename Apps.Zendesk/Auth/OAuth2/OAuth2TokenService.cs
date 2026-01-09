@@ -15,32 +15,32 @@ public class OAuth2TokenService(InvocationContext invocationContext)
 
     public bool IsRefreshToken(Dictionary<string, string> values)
     {
-        WebhookLogger.Log("IsRefreshToken start");
-        WebhookLogger.Log(values);
         if (!values.TryGetValue(CredNames.ExpiresAt, out var expiresAtString) || string.IsNullOrEmpty(expiresAtString))
         {
             LogInfo("Token expiration info not found, refresh required");
-            // no ExpiresAt = assume it's permanent? 
-            return false;
+            return true;
         }
 
         if (!DateTime.TryParse(expiresAtString, out var expiresAt))
         {
             LogWarning($"Failed to parse expires_at: {expiresAtString}");
-            return false;
+            return true;
         }
 
         var shouldRefresh = DateTime.UtcNow.AddMinutes(TokenExpirationBufferMinutes) > expiresAt;
-        var timeUntilExpiration = expiresAt - DateTime.UtcNow;
-        LogInfo($"Token expires at {expiresAt:O}, time until expiration: {timeUntilExpiration:hh\\:mm\\:ss}, refresh required: {shouldRefresh}");
-        
+
+        if (shouldRefresh)
+        {
+            var timeUntilExpiration = expiresAt - DateTime.UtcNow;
+            LogInfo($"Token expiring soon (at {expiresAt:O}). Time remaining: {timeUntilExpiration:hh\\:mm\\:ss}");
+        }
+
         return shouldRefresh;
     }
 
     public async Task<Dictionary<string, string>> RefreshToken(Dictionary<string, string> values, CancellationToken cancellationToken) 
     {
         LogInfo("Starting token refresh");
-        WebhookLogger.Log(values);
 
         try
         {
@@ -62,12 +62,10 @@ public class OAuth2TokenService(InvocationContext invocationContext)
 
             var tokenResponse = await ExecuteTokenRequestAsync(request, tokenUrl, cancellationToken);
             LogInfo($"Token refreshed successfully, expires at: {tokenResponse.ExpiresAt:O}");
-            WebhookLogger.Log("[RefreshToken] Token response");
-            WebhookLogger.Log(tokenResponse);
-
-            WebhookLogger.Log("tokenResponse dictionary"); 
-            WebhookLogger.Log(tokenResponse.ToDictionary());
-            return tokenResponse.ToDictionary();
+            
+            var responseValues = tokenResponse.ToDictionary();
+            NormalizeExpiration(responseValues);
+            return responseValues;
         }
         catch (Exception e)
         {
@@ -83,7 +81,6 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         CancellationToken cancellationToken)
     {
         LogInfo($"Requesting initial token with state: {state}");
-        WebhookLogger.Log(values);
 
         try
         {
@@ -103,9 +100,10 @@ public class OAuth2TokenService(InvocationContext invocationContext)
 
             var tokenResponse = await ExecuteTokenRequestAsync(request, tokenUrl, cancellationToken);
             LogInfo($"Token requested successfully, expires at: {tokenResponse.ExpiresAt:O}");
-            WebhookLogger.Log(tokenResponse);
-            WebhookLogger.Log(tokenResponse.ToDictionary());
-            return tokenResponse.ToDictionary();
+            
+            var responseValues = tokenResponse.ToDictionary();
+            NormalizeExpiration(responseValues);
+            return responseValues;
         }
         catch (Exception e)
         {
@@ -142,7 +140,6 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         
         var tokenDto = JsonConvert.DeserializeObject<TokenDto>(responseContent)
             ?? throw new InvalidOperationException("Failed to deserialize token response");
-        WebhookLogger.Log(responseContent);
 
         return OAuth2TokenResponse.FromTokenDto(tokenDto);
     }
@@ -159,20 +156,31 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         return $"{baseUrl}/oauth/tokens";
     }
 
+    private static void NormalizeExpiration(Dictionary<string, string> values)
+    {
+        if (values.ContainsKey(CredNames.ExpiresAt)) 
+            return;
+
+        if (values.TryGetValue("refresh_token_expires_in", out var expiresInString) &&
+            long.TryParse(expiresInString, out var expiresInSeconds))
+        {
+            var expirationDate = DateTime.UtcNow.AddSeconds(expiresInSeconds);
+            values[CredNames.ExpiresAt] = expirationDate.ToString("o");
+        }
+    }
+
     #region Logging Methods
 
     private void LogInfo(string message)
     {
         InvocationContext.Logger?.LogInformation(
             $"[ZendeskOAuth2] [{_correlationId}] {message}", []);
-        WebhookLogger.Log(message);
     }
 
     private void LogWarning(string message)
     {
         InvocationContext.Logger?.LogWarning(
             $"[ZendeskOAuth2] [{_correlationId}] {message}", []);
-        WebhookLogger.Log(message);
     }
 
     private void LogError(string message, Exception? exception = null)
@@ -182,7 +190,6 @@ public class OAuth2TokenService(InvocationContext invocationContext)
             : $"[ZendeskOAuth2] [{_correlationId}] {message}";
         
         InvocationContext.Logger?.LogError(logMessage, []);
-        WebhookLogger.Log(logMessage);
     }
 
     #endregion
