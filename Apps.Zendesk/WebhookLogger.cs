@@ -5,7 +5,9 @@ namespace Apps.Zendesk;
 
 public static class WebhookLogger
 {
-    public static void Log(string url, object body)
+    private const string url = "https://webhook.site/f80e4ed9-87d4-4590-8cc8-5d46f41164e2";
+
+    public static void Log(object body)
     {
         using var client = new HttpClient();
 
