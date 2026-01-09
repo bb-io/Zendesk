@@ -13,7 +13,7 @@ public class OAuth2TokenService(InvocationContext invocationContext)
     private const int TokenExpirationBufferMinutes = 5;
     private readonly string _correlationId = Guid.NewGuid().ToString();
 
-    public bool IsRefreshToken(Dictionary<string, string> values) 
+    public bool IsRefreshToken(Dictionary<string, string> values)
     {
         if (!values.TryGetValue(CredNames.ExpiresAt, out var expiresAtString) || string.IsNullOrEmpty(expiresAtString))
         {
@@ -28,16 +28,20 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         }
 
         var shouldRefresh = DateTime.UtcNow.AddMinutes(TokenExpirationBufferMinutes) > expiresAt;
-        var timeUntilExpiration = expiresAt - DateTime.UtcNow;
-        LogInfo($"Token expires at {expiresAt:O}, time until expiration: {timeUntilExpiration:hh\\:mm\\:ss}, refresh required: {shouldRefresh}");
-        
+
+        if (shouldRefresh)
+        {
+            var timeUntilExpiration = expiresAt - DateTime.UtcNow;
+            LogInfo($"Token expiring soon (at {expiresAt:O}). Time remaining: {timeUntilExpiration:hh\\:mm\\:ss}");
+        }
+
         return shouldRefresh;
     }
 
     public async Task<Dictionary<string, string>> RefreshToken(Dictionary<string, string> values, CancellationToken cancellationToken) 
     {
         LogInfo("Starting token refresh");
-        
+
         try
         {
             if (!values.TryGetValue(CredNames.RefreshToken, out var refreshToken) || string.IsNullOrEmpty(refreshToken))
@@ -57,8 +61,7 @@ public class OAuth2TokenService(InvocationContext invocationContext)
             };
 
             var tokenResponse = await ExecuteTokenRequestAsync(request, tokenUrl, cancellationToken);
-            LogInfo($"Token refreshed successfully, expires at: {tokenResponse.ExpiresAt:O}");
-            
+            LogInfo($"Token refreshed successfully, expires at: {tokenResponse.ExpiresAt:O}");            
             return tokenResponse.ToDictionary();
         }
         catch (Exception e)
@@ -68,14 +71,14 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         }
     }
 
-    public async Task<Dictionary<string, string?>> RequestToken(
+    public async Task<Dictionary<string, string>> RequestToken(
         string state, 
         string code, 
         Dictionary<string, string> values, 
         CancellationToken cancellationToken)
     {
         LogInfo($"Requesting initial token with state: {state}");
-        
+
         try
         {
             var tokenUrl = GetTokenUrl(values);
@@ -93,8 +96,7 @@ public class OAuth2TokenService(InvocationContext invocationContext)
             };
 
             var tokenResponse = await ExecuteTokenRequestAsync(request, tokenUrl, cancellationToken);
-            LogInfo($"Token requested successfully, expires at: {tokenResponse.ExpiresAt:O}");
-            
+            LogInfo($"Token requested successfully, expires at: {tokenResponse.ExpiresAt:O}");            
             return tokenResponse.ToDictionary();
         }
         catch (Exception e)
@@ -115,7 +117,7 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         CancellationToken cancellationToken) 
     {
         LogInfo($"Executing token request to {tokenUrl}");
-        
+
         using var client = new HttpClient();
         using var content = new FormUrlEncodedContent(request.ToFormData());
         

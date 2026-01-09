@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Apps.Zendesk.Models.Dtos;
 
-internal class TokenDto 
+public class TokenDto 
 {
     [JsonProperty("access_token")]
     public string AccessToken { get; set; } = null!;
