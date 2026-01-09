@@ -20,13 +20,14 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         if (!values.TryGetValue(CredNames.ExpiresAt, out var expiresAtString) || string.IsNullOrEmpty(expiresAtString))
         {
             LogInfo("Token expiration info not found, refresh required");
-            return true;
+            // no ExpiresAt = assume it's permanent? 
+            return false;
         }
 
         if (!DateTime.TryParse(expiresAtString, out var expiresAt))
         {
             LogWarning($"Failed to parse expires_at: {expiresAtString}");
-            return true;
+            return false;
         }
 
         var shouldRefresh = DateTime.UtcNow.AddMinutes(TokenExpirationBufferMinutes) > expiresAt;
