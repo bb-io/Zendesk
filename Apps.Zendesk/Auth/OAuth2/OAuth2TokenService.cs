@@ -4,11 +4,12 @@ using Apps.Zendesk.Models.Dtos;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Applications.Sdk.Common.Authentication;
 
 namespace Apps.Zendesk.Auth.OAuth2;
 
 public class OAuth2TokenService(InvocationContext invocationContext)
-    : BaseInvocable(invocationContext), IOAuth2TokenService
+    : BaseInvocable(invocationContext), IOAuth2TokenService, ITokenRefreshable
 {
     private const int TokenExpirationBufferMinutes = 5;
     private readonly string _correlationId = Guid.NewGuid().ToString();
@@ -36,6 +37,19 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         }
 
         return shouldRefresh;
+    }
+
+    public int? GetRefreshTokenExprireInMinutes(Dictionary<string, string> values)
+    {
+        if (!values.TryGetValue(CredNames.ExpiresAt, out var expireValue))
+            return null;
+
+        if (!DateTime.TryParse(expireValue, out var expireDate))
+            return null;
+
+        var difference = expireDate - DateTime.UtcNow;
+
+        return (int)difference.TotalMinutes - TokenExpirationBufferMinutes;
     }
 
     public async Task<Dictionary<string, string>> RefreshToken(Dictionary<string, string> values, CancellationToken cancellationToken) 
