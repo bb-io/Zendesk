@@ -21,7 +21,7 @@ public class PollingList : BaseInvocable
         Client = new ZendeskClient(invocationContext);
     }
 
-    [PollingEvent("On labels added to articles", "On any new labels are added to articles")]
+    [PollingEvent("On labels added to articles", "On labels are added to articles")]
     public async Task<PollingEventResponse<ArticleLabelsMemory, ListArticlesResponse>> OnLabelsAddedToArticles(
         PollingEventRequest<ArticleLabelsMemory> request,
         [PollingEventParameter] OnLabelsAddedInput input)
@@ -74,7 +74,7 @@ public class PollingList : BaseInvocable
         };
     }
 
-    [PollingEvent("On new tickets added", "On any new tickets are added")]
+    [PollingEvent("On new tickets added", "On new tickets are added")]
     public async Task<PollingEventResponse<DateMemory, ListTicketsResponse>> OnTicketsAddedToArticles(
        PollingEventRequest<DateMemory> request)
     {

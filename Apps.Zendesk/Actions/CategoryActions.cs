@@ -91,7 +91,7 @@ public class CategoryActions(InvocationContext invocationContext) : BaseInvocabl
         return await Client.ExecuteWithHandling<MissingLocales>(request);
     }
 
-    [Action("Update category translation", Description = "Updates the translation for a category, creates a new translation if there is none")]
+    [Action("Update category translation", Description = "Update a category translation or create it if it does not exist")]
     public async Task<Translation> TranslateCategory([ActionParameter] CategoryIdentifier category, [ActionParameter] TranslationRequest input)
     {
         var missingLocales = await GetCategoryMissingTranslations(category);
