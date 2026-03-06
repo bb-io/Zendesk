@@ -4,7 +4,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Product>Zendesk</Product>
-    <Version>1.2.21</Version>
+    <Version>1.2.22</Version>
     <Description>Zendesk makes customer service better</Description>
     <AssemblyName>Apps.Zendesk</AssemblyName>
   </PropertyGroup>
@@ -18,6 +18,7 @@
     <Folder Include="Webhooks\Handlers\UserHandlers\" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource CopyToOutputDirectory="Always" Include="..\README.md" Link="README.md"></EmbeddedResource>
     <EmbeddedResource CopyToOutputDirectory="Always" Include="image\icon.png"></EmbeddedResource>
   </ItemGroup>
 </Project>

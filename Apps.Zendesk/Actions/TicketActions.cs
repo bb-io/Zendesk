@@ -62,7 +62,7 @@ public class TicketActions : BaseInvocable
         return new ListTicketsResponse { Tickets = tickets };
     }
 
-    [Action("Get ticket comments", Description = "List comments for a ticket")]
+    [Action("Get ticket comments", Description = "Get comments for a ticket")]
     public async Task<ListTicketCommentsResponse> GetTicketComments(
            [ActionParameter] TicketIdentifier ticket, [ActionParameter] TicketCommentsFilterInput filter)
     {
@@ -117,7 +117,7 @@ public class TicketActions : BaseInvocable
         return response.Ticket;
     }
 
-    [Action("Delete ticket", Description = "Delete specific ticket")]
+    [Action("Delete ticket", Description = "Delete a specific ticket")]
     public Task DeleteTicket([ActionParameter] TicketIdentifier ticket)
     {
         var request = new ZendeskRequest($"/api/v2/tickets/{ticket.Id}", Method.Delete);

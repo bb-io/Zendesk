@@ -39,7 +39,7 @@ public class ArticleActions : BaseInvocable
         Client = new ZendeskClient(invocationContext);
     }
 
-    [Action("Search articles", Description = "Search articles using various filter parameters")]
+    [Action("Search articles", Description = "Search articles using filters")]
     public async Task<ListArticlesResponse> SearchArticles([ActionParameter] SearchArticlesRequest input)
     {
 
@@ -69,7 +69,7 @@ public class ArticleActions : BaseInvocable
         return new ListArticlesResponse { Articles = articles };
     }
 
-    [Action("Get article metadata", Description = "Get metadata information of a specific article")]
+    [Action("Get article metadata", Description = "Get metadata for a specific article")]
     public async Task<ArticleWithMissingLocales> GetArticle([ActionParameter] ArticleIdentifier article)
     {
         var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.ContentId}", Method.Get);
@@ -96,7 +96,7 @@ public class ArticleActions : BaseInvocable
         return response.Article;
     }
 
-    [Action("Update article metadata", Description = "Update an article. This action does not update translation properties such as the article's title, body, locale, or draft. Use 'Upload article'")]
+    [Action("Update article metadata", Description = "Update article metadata. This action does not update translation properties such as title, content, locale, or draft. Use Upload article.")]
     public async Task<Article> UpdateArticle([ActionParameter] ArticleIdentifier article,
         [ActionParameter] UpdateArticleRequest input)
     {
@@ -212,7 +212,7 @@ public class ArticleActions : BaseInvocable
     }
 
 
-    [Action("Get article ID from content file", Description = "Return the article ID embedded in the content file")]
+    [Action("Get article ID from content file", Description = "Get the article ID embedded in the content file")]
     public async Task<ArticleIdResponse> GetArticleIdFromHtmlFile([ActionParameter] FileRequest input)
     {
         var file = await _fileManagementClient.DownloadAsync(input.File);
@@ -227,7 +227,7 @@ public class ArticleActions : BaseInvocable
     }
 
     [BlueprintActionDefinition(BlueprintAction.UploadContent)]
-    [Action("Upload article", Description ="Updates the translation for an article, creates a new translation if there is none. Takes a translated file (HTML) as input.")]
+    [Action("Upload article", Description = "Update an article translation or create it if it does not exist")]
     public async Task<TranslationWithFileOutput> TranslateArticleFromFile([ActionParameter] FileTranslationRequest input)
     {
         if (string.IsNullOrWhiteSpace(input.Locale))

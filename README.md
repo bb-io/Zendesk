@@ -6,25 +6,25 @@ Blackbird is the new automation backbone for the language technology industry. B
 
 <!-- begin docs -->
 
-Zendesk is a customer service solution provider. Its feature set includes ticketing, chat, helpdesk articles and a Sales CRM. This Zendesk app primarily focusses on helpdesk articles and its localization features. It also includes actions for tickets.
+Zendesk is a customer service platform with ticketing, chat, help center content, and CRM capabilities. This app focuses on help center article localization and ticket workflows.
 
 ## Before setting up
 
-Before you can connect you need to make sure that:
+Before you connect, make sure:
 
 - You have a Zendesk account on the instance you want to connect to.
-- Your Zendesk account has the right permissions. It is recommended that you have the **admin role for Zendesk guide**. Furthermore, if you want to setup event triggers you will need to have either the **admin role for Zendesk suppport** or you need to have a [custom role](https://support.zendesk.com/hc/en-us/articles/4408882153882-Creating-custom-roles-and-assigning-agents#topic_cxn_hig_bd) with permission to manage webhooks.
+- Your Zendesk account has the right permissions. It is recommended to have the **admin role for Zendesk Guide**. If you want to set up event triggers, you need either the **admin role for Zendesk Support** or a [custom role](https://support.zendesk.com/hc/en-us/articles/4408882153882-Creating-custom-roles-and-assigning-agents#topic_cxn_hig_bd) with permission to manage webhooks.
 
 ## Connecting
 
-Our app implements 2 types of authentication: OAuth 2.0 and API Token. Choose whatever suits your needs but API token is usually the easiest to setup and more stable in the long run.
+This app supports two authentication methods: OAuth 2.0 and API Token. API Token is usually the easiest to set up and often more stable long-term.
 
 ### OAuth 2.0 authentication
 
 1. Navigate to apps and search for Zendesk.
 2. Click _Add Connection_.
 3. Name your connection for future reference e.g. 'My client'.
-4. Fill in the Base URL to the Zendesk instance you want to connect to. The base URL is of shape `https://<instance name>.zendesk.com`. You can usually copy this part of the URL when you are logged into your Zendesk instance. Note: for different brands see disclaimer below.
+4. Fill in the Base URL of the Zendesk instance you want to connect to. The format is `https://<instance name>.zendesk.com`.
 5. Click _Authorize connection_.
 6. Follow the instructions that Zendesk gives you, authorizing Blackbird.io to act on your behalf.
 7. When you return to Blackbird, confirm that the connection has appeared and the status is _Connected_.
@@ -40,7 +40,7 @@ Our app implements 2 types of authentication: OAuth 2.0 and API Token. Choose wh
 1. Navigate to apps and search for Zendesk.
 2. Click _Add Connection_.
 3. Name your connection for future reference e.g. 'My client'.
-4. Fill in the Base URL to the Zendesk instance you want to connect to. The base URL is of shape `https://<instance name>.zendesk.com`. You can usually copy this part of the URL when you are logged into your Zendesk instance. Note: for different brands see disclaimer below.
+4. Fill in the Base URL of the Zendesk instance you want to connect to. The format is `https://<instance name>.zendesk.com`.
 5. Fill `Email` with the email address of the Zendesk user you want to connect with.
 6. Go to your Zendesk instance and navigate to *Zendesk Admin Center > Apps and integrations > APIs > API tokens* and create a new API token.
 6. Copy the API token and paste it into the appropriate field in Blackbird.
@@ -51,41 +51,140 @@ Our app implements 2 types of authentication: OAuth 2.0 and API Token. Choose wh
 
 ### Articles
 
-- **Search articles** search articles using various filter parameters
-- **Get/create/update/archive article (metadata)** used to configure metadata variables such as section, author, position, permission group, user segment, missing locales, outdated locales, etc.
-- **Download article** downloads the translatable content of an article as a file. Use this action in conjunction with some translation app and 'Upload article'.
-- **Upload article** updates the translation for an article, creates a new translation if there is none. Takes a translated file as input. As the article ID is included in the head of the file, it will update the correct article, but you can specify the `Article ID` in the action as well.
-- **Add label to article** on a professional or enterprise plan, it adds a label to an article.
-- **Delete label from article** on a professional or enterprise plan, it deletes a label from an article.
+- **Search articles** Search articles using filters.
+    Advanced settings:
+    - **Query**: Filter articles by search text.
+    - **Category IDs**: Limit the search to one or more categories.
+    - **Section IDs**: Limit the search to one or more sections.
+    - **Label names**: Limit the search to articles with specific labels.
+    - **Locale**: Filter results to a specific locale.
+    - **Created after**: Include articles created after this date.
+    - **Created before**: Include articles created before this date.
+    - **Created at**: Include articles created on this date.
+    - **Updated after**: Include articles updated after this date.
+    - **Updated before**: Include articles updated before this date.
+    - **Updated at**: Include articles updated on this date.
+- **Get article metadata** Get metadata for a specific article.
+- **Create article** Create a new article.
+    Advanced settings:
+    - **Content (HTML)**: Set the article content.
+    - **Author**: Set the article author.
+    - **Are comments disabled?**: Disable comments for the article.
+    - **Is draft?**: Save the article as a draft.
+    - **Is promoted?**: Mark the article as promoted.
+    - **Position**: Set the article position.
+    - **Notify subscribers?**: Notify subscribers about the new article.
+- **Update article metadata** Update article metadata without changing translation content.
+    Advanced settings:
+    - **Permission group**: Update article visibility permissions.
+    - **User segment**: Update the user segment for article visibility.
+    - **Section**: Move the article to another section.
+- **Archive article** Archive an article.
+- **Add image to article content** Add an image at the bottom of an article.
+- **Download article** Get the translatable content of an article as a file.
+- **Get article ID from content file** Get the article ID embedded in the content file.
+- **Upload article** Update an article translation or create it if it does not exist.
+    Advanced settings:
+    - **Is outdated**: Mark the translation as outdated.
+    - **Article ID**: Specify the article ID instead of using file metadata.
+- **Add label to article** Add a label to an article.
+- **Delete label from article** Delete a label from an article.
 
 ![1751975102552](image/README/1751975102552.png)
 
 ### Categories
 
-- **Search categories** returns all categories on this Zendesk instance. You can also specify the _Missing translation in_ variable, in which case this action will only return categories that are actually missing translations in that language.
-- **Get/Create/update/delete category**.
-- **Get category translation** returns the content of a category, namely its name and description (body).
-- **Update category translation** creates a translation if there is none, or updates the translation if it already exists.
+- **Search categories** Search categories, optionally filtered by missing translations.
+    Advanced settings:
+    - **Missing translation in**: Return only categories missing one or more locales.
+- **Get category** Get information on a specific category.
+- **Create category** Create a new category.
+    Advanced settings:
+    - **Description**: Set the category description.
+- **Update category** Update a category.
+- **Delete category** Delete a category.
+- **Get category translation** Get a category translation for a specific locale.
+- **Get category missing translations** Get the missing translations of a category.
+- **Update category translation** Update a category translation or create it if it does not exist.
+    Advanced settings:
+    - **Title**: Set the translated title.
+    - **Content**: Set the translated content.
 
 ### Sections
 
-- **Search sections** returns all sections on this Zendesk instance. Optionally you can also specify the category, which will limit the search to that specific category. You can also specify the _Missing translation in_ variable, in which case this action will only return sections that are actually missing translations in that language.
-- **Get/Create/update/delete section**.
-- **Get section translation**  returns the content of a section, namely its name and description (body).
-- **Update section translation** creates a translation if there is none, or updates the translation if it already exists.
+- **Search sections** Search sections, optionally filtered by category or missing translations.
+    Advanced settings:
+    - **Category ID**: Limit the search to a specific category.
+- **Get section** Get information on a specific section.
+- **Create section** Create a new section.
+- **Update section** Update a section.
+- **Delete section** Delete a section.
+- **Get section translation** Get a section translation for a specific locale.
+- **Get section missing translations** Get the missing translations of a section.
+- **Update section translation** Update a section translation or create it if it does not exist.
 
 ### General
 
-- **Search helpcenter languages** returns the default language of the helpcenter, the additional languages, as well as the complete list of languages that have been configured in Zendesk. You can find these settings in the Zendesk help center > Settings > Language settings.
+- **Search helpcenter languages** Get all activated help center languages.
 
 ### Tickets
 
-- **Search/get/create/update/delete ticket**.
+- **Search tickets** Search tickets.
+    Advanced settings:
+    - **Status**: Filter tickets by status.
+    - **Priority**: Filter tickets by priority.
+- **Get ticket comments** Get comments for a ticket.
+    Advanced settings:
+    - **Newest first**: Sort comments from newest to oldest.
+- **Get ticket** Get a specific ticket.
+- **Create ticket** Create a new ticket.
+    Advanced settings:
+    - **Comment**: Add an initial ticket comment.
+    - **Public**: Mark the comment as public.
+    - **Subject**: Set the ticket subject.
+- **Update ticket** Update a specific ticket.
+- **Delete ticket** Delete a specific ticket.
+
+### Debug
+
+- **Debug** Debug the application.
 
 ## Events
 
-- **On article published** is the most useful event. This event is triggered when any article is published and could be the perfect trigger for sending the article for translation based on the missing translations (see example). It has an optional parameter _Only source articles_ which, if true, will only trigger the bird if the source locale of the article is published. This is helpful to not create infinite publish loops of translations.
-- **Other** events for article comments, subscriptions, votes and user events.
+### Articles
+
+- **On article author changed** Triggers when an article author changes.
+    Advanced settings:
+    - **Brand ID**: Trigger only for a specific brand.
+    - **Account ID**: Trigger only for a specific account.
+    - **Article ID**: Trigger only for a specific article.
+- **On article published** Triggers when an article is published.
+    Advanced settings:
+    - **Only source articles**: Trigger only when the published locale is the source locale.
+    - **Required label**: Trigger only when the article contains this label.
+    - **Language**: Trigger only for a specific locale.
+- **On article subscription created** Triggers when an article subscription is created.
+- **On article unpublished** Triggers when an article is unpublished.
+- **On article vote created** Triggers when an article vote is created.
+- **On article vote changed** Triggers when an article vote is changed.
+- **On article vote removed** Triggers when an article vote is removed.
+- **On article comment created** Triggers when an article comment is created.
+- **On article comment changed** Triggers when an article comment is changed.
+- **On article comment published** Triggers when an article comment is published.
+- **On article comment unpublished** Triggers when an article comment is unpublished.
+
+### Tickets
+
+- **On ticket comment created** Triggers when a ticket comment is created.
+    Advanced settings:
+    - **Ignore if body contains**: Skip events when the comment body contains this text.
+    - **Only public comments**: Trigger only for public comments.
+    - **Ignore if web service comment**: Skip events created via the web service channel.
+
+### Polling
+
+- **On labels added to articles** Triggers when labels are added to matching articles.
+- **On new tickets added** Triggers when new tickets are created.
 
 ## Example
 

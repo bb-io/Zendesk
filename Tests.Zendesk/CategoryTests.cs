@@ -16,10 +16,10 @@ namespace Tests.Zendesk
 
             var input = new OptionalMissingLocaleIdentifier { };
 
-            var result = action.GetAllCategories(input);
+            var result = await action.GetAllCategories(input);
 
             Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
-            foreach (var category in result.Result)
+            foreach (var category in result)
             {                
                 Assert.IsNotNull(category);
             }
