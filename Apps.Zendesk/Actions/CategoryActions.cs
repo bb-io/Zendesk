@@ -23,13 +23,13 @@ public class CategoryActions(InvocationContext invocationContext) : BaseInvocabl
         var request = new ZendeskRequest(endpoint, Method.Get);
         var categories = (await Client.GetPaginated<MultipleCategories>(request)).SelectMany(x => x.Categories);
 
-        if (missingLocalesInput.Locale != null)
+        if (missingLocalesInput.Locales != null && missingLocalesInput.Locales.Any())
         {
             var filteredCategories = new List<Category>();
             foreach (var category in categories)
             {
                 var missingLocales = await GetCategoryMissingTranslations(new CategoryIdentifier { Id = category.Id });
-                if (missingLocales.Locales.Contains(missingLocalesInput.Locale))
+                if (missingLocales.Locales.Intersect(missingLocalesInput.Locales).Any())
                     filteredCategories.Add(category);
             }
             categories = filteredCategories;
@@ -84,6 +84,7 @@ public class CategoryActions(InvocationContext invocationContext) : BaseInvocabl
         return response.Translation;
     }
 
+    [Action("Get category missing translations", Description = "Get the missing translations of a category")]
     public async Task<MissingLocales> GetCategoryMissingTranslations([ActionParameter] CategoryIdentifier category)
     {
         var request = new ZendeskRequest($"/api/v2/help_center/categories/{category.Id}/translations/missing", Method.Get);

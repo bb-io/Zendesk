@@ -13,6 +13,7 @@ namespace Tests.Zendesk
             var validator = new ConnectionValidator(InvocationContext);
 
             var result = await validator.ValidateConnection(Creds, CancellationToken.None);
+            Console.WriteLine(result.Message);
             Assert.IsTrue(result.IsValid);
         }
 

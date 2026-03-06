@@ -27,13 +27,13 @@ public class SectionActions : BaseInvocable
         var request = new ZendeskRequest(endpoint, Method.Get);
         var sections = (await Client.GetPaginated<MultipleSections>(request)).SelectMany(x => x.Sections);
 
-        if (missingLocalesInput.Locale != null)
+        if (missingLocalesInput.Locales != null && missingLocalesInput.Locales.Any())
         {
             var filteredSections = new List<Section>();
             foreach (var section in sections)
             {
                 var missingLocales = await GetSectionMissingTranslations(new SectionIdentifier { Id = section.Id });
-                if (missingLocales.Locales.Contains(missingLocalesInput.Locale))
+                if (missingLocales.Locales.Intersect(missingLocalesInput.Locales).Any())
                     filteredSections.Add(section);
             }
             sections = filteredSections;
@@ -87,6 +87,7 @@ public class SectionActions : BaseInvocable
         return response.Translation;
     }
 
+    [Action("Get section missing translations", Description = "Get the missing translations of a section")]
     public async Task<MissingLocales> GetSectionMissingTranslations([ActionParameter] SectionIdentifier section)
     {
         var request = new ZendeskRequest($"/api/v2/help_center/sections/{section.Id}/translations/missing", Method.Get);

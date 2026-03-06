@@ -8,5 +8,5 @@ public class OptionalMissingLocaleIdentifier
 {
     [DataSource(typeof(LocaleDataHandler))]
     [Display("Missing translation in")]
-    public string? Locale { get; set; }
+    public IEnumerable<string>? Locales { get; set; }
 }

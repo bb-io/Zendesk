@@ -1,7 +1,9 @@
 {
   "ConnectionDefinition": {
-    "Authorization": "",
-    "api_endpoint": ""
+    "ConnectionType": "API token",
+    "api_endpoint": "",
+    "email": "",
+    "access_token": ""
   },
   "TestFolder": "TestFiles"
 }
