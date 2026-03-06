@@ -95,10 +95,7 @@ This example shows one of many use cases. Here, whenever an article is published
 ## Demo video
 
 How to Localize Zendesk Articles Automatically with Blackbird.io
-
-import { YouTube } from '@astro-community/astro-embed-youtube';
-
-<YouTube id="https://youtu.be/Nza3A0s81QY" />
+[![Watch the video](https://img.youtube.com/vi/Nza3A0s81QY/0.jpg)](https://www.youtube.com/watch?v=Nza3A0s81QY)
 
 ## Missing features
 
