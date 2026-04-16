@@ -6,10 +6,8 @@ using Apps.Zendesk.Models.Responses;
 using Apps.Zendesk.Models.Responses.Wrappers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
-using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Exceptions;
-using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Utils.Extensions.Files;
 using Blackbird.Applications.SDK.Blueprints;
@@ -26,47 +24,73 @@ using System.Text.RegularExpressions;
 namespace Apps.Zendesk.Actions;
 
 [ActionList("Articles")]
-public class ArticleActions : BaseInvocable
+public class ArticleActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) 
+    : BaseInvocable(invocationContext)
 {
-    private readonly IFileManagementClient _fileManagementClient;
+    private readonly IFileManagementClient _fileManagementClient = fileManagementClient;
 
-    private ZendeskClient Client { get; }
-
-    public ArticleActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) 
-        : base(invocationContext)
-    {
-        _fileManagementClient = fileManagementClient;
-        Client = new ZendeskClient(invocationContext);
-    }
+    private ZendeskClient Client { get; } = new ZendeskClient(invocationContext);
 
     [Action("Search articles", Description = "Search articles using filters")]
     public async Task<ListArticlesResponse> SearchArticles([ActionParameter] SearchArticlesRequest input)
     {
+        long startTimeUnix = 0;
+        if (input.UpdatedAfter.HasValue)
+            startTimeUnix = new DateTimeOffset(DateTime.SpecifyKind(input.UpdatedAfter.Value, DateTimeKind.Utc)).ToUnixTimeSeconds();
+        else if (input.CreatedAfter.HasValue)
+            startTimeUnix = new DateTimeOffset(DateTime.SpecifyKind(input.CreatedAfter.Value, DateTimeKind.Utc)).ToUnixTimeSeconds();
 
-        if (input.Query == null && input.LabelNames == null && input.CategoryIds == null && input.SectionIds == null)
+        // While Zendesk has the 'search' endpoint with all server-side filters, it won't pick up drafts
+        // The 'List articles incrementally' will pick all the drafts, but it does not have server-side filters
+        // We'll use the incremental endpoint to fetch all drafts and do the filtering manually
+        // https://developer.zendesk.com/api-reference/help_center/help-center-api/articles/#list-articles-incrementally
+        var request = new ZendeskRequest($"/api/v2/help_center/incremental/articles?start_time={startTimeUnix}", Method.Get);
+
+        var articles = await Client.GetPaginatedIncremental<MultipleArticles>(request, response => response.Articles?.Count() ?? 0);
+        var filtered = articles.SelectMany(x => x.Articles).AsEnumerable();
+
+        if (input.IncludeDrafts != true)
+            filtered = filtered.Where(a => !a.Draft);
+
+        if (input.Locale != null)
+            filtered = filtered.Where(a => a.Locale == input.Locale);
+
+        if (input.SectionIds != null && input.SectionIds.Any())
+            filtered = filtered.Where(a => input.SectionIds.Contains(a.SectionId));
+
+        // API query parameter for label_names does not work, that's why we'll do it manually
+        if (input.LabelNames != null && input.LabelNames.Any())
+            filtered = filtered.Where(a => a.Labels != null && a.Labels.Intersect(input.LabelNames).Any());
+
+        if (!string.IsNullOrEmpty(input.Query))
         {
-            throw new PluginMisconfigurationException("At least one of 'Query', 'Category IDs', 'Section Ids' or 'Label names' should be added to the input values.");
+            string searchString = input.Query.ToLowerInvariant();
+
+            filtered = filtered.Where(a =>
+                (!string.IsNullOrEmpty(a.Title) && a.Title.Contains(searchString, StringComparison.InvariantCultureIgnoreCase)) ||
+                (!string.IsNullOrEmpty(a.Body) && a.Body.Contains(searchString, StringComparison.InvariantCultureIgnoreCase))
+            );
         }
 
-        var endpoint = $"/api/v2/help_center/articles/search";
-        var request = new ZendeskRequest(endpoint, Method.Get);
-        if (input.Query != null) request.AddQueryParameter("query", input.Query);
-        if (input.Locale != null) request.AddQueryParameter("locale", input.Locale);
+        if (input.CreatedAfter.HasValue)
+            filtered = filtered.Where(a => a.CreatedAt >= input.CreatedAfter.Value);
 
-        if (input.CategoryIds != null) request.AddQueryParameter("category", string.Join(',', input.CategoryIds));
-        if (input.SectionIds != null) request.AddQueryParameter("section", string.Join(',', input.SectionIds));
-        if (input.LabelNames != null) request.AddQueryParameter("label_names", string.Join(',', input.LabelNames));
+        if (input.CreatedBefore.HasValue)
+            filtered = filtered.Where(a => a.CreatedAt <= input.CreatedBefore.Value);
 
-        if (input.CreatedAfter.HasValue) request.AddQueryParameter("created_after", input.CreatedAfter.Value.ToString("yyyy-MM-dd"));
-        if (input.CreatedBefore.HasValue) request.AddQueryParameter("created_before", input.CreatedBefore.Value.ToString("yyyy-MM-dd"));
-        if (input.CreatedAt.HasValue) request.AddQueryParameter("created_at", input.CreatedAt.Value.ToString("yyyy-MM-dd"));
-        if (input.UpdatedAfter.HasValue) request.AddQueryParameter("updated_after", input.UpdatedAfter.Value.ToString("yyyy-MM-dd"));
-        if (input.UpdatedBefore.HasValue) request.AddQueryParameter("updated_before", input.UpdatedBefore.Value.ToString("yyyy-MM-dd"));
-        if (input.UpdatedAt.HasValue) request.AddQueryParameter("updated_at", input.UpdatedAt.Value.ToString("yyyy-MM-dd"));
+        if (input.CreatedAt.HasValue)
+            filtered = filtered.Where(a => a.CreatedAt.Date == input.CreatedAt.Value.Date);
 
-        var articles = await Client.GetPaginatedResults<Article>(request);
+        if (input.UpdatedAfter.HasValue)
+            filtered = filtered.Where(a => a.UpdatedAt >= input.UpdatedAfter.Value);
 
-        return new ListArticlesResponse { Articles = articles };
+        if (input.UpdatedBefore.HasValue)
+            filtered = filtered.Where(a => a.UpdatedAt <= input.UpdatedBefore.Value);
+
+        if (input.UpdatedAt.HasValue)
+            filtered = filtered.Where(a => a.UpdatedAt.Date == input.UpdatedAt.Value.Date);
+
+        return new ListArticlesResponse { Articles = filtered.ToArray() };
     }
 
     [Action("Get article metadata", Description = "Get metadata for a specific article")]
