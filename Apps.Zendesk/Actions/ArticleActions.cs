@@ -1,4 +1,5 @@
 ﻿using Apps.Zendesk.DataSourceHandlers;
+using Apps.Zendesk.Extensions;
 using Apps.Zendesk.Models.Blueprints;
 using Apps.Zendesk.Models.Identifiers;
 using Apps.Zendesk.Models.Requests;
@@ -36,9 +37,9 @@ public class ArticleActions(InvocationContext invocationContext, IFileManagement
     {
         long startTimeUnix = 0;
         if (input.UpdatedAfter.HasValue)
-            startTimeUnix = new DateTimeOffset(DateTime.SpecifyKind(input.UpdatedAfter.Value, DateTimeKind.Utc)).ToUnixTimeSeconds();
+            startTimeUnix = input.UpdatedAfter.Value.ToUnixTimeSeconds();
         else if (input.CreatedAfter.HasValue)
-            startTimeUnix = new DateTimeOffset(DateTime.SpecifyKind(input.CreatedAfter.Value, DateTimeKind.Utc)).ToUnixTimeSeconds();
+            startTimeUnix = input.CreatedAfter.Value.ToUnixTimeSeconds();
 
         // While Zendesk has the 'search' endpoint with all server-side filters, it won't pick up drafts
         // The 'List articles incrementally' will pick all the drafts, but it does not have server-side filters
@@ -47,48 +48,19 @@ public class ArticleActions(InvocationContext invocationContext, IFileManagement
         var request = new ZendeskRequest($"/api/v2/help_center/incremental/articles?start_time={startTimeUnix}", Method.Get);
 
         var articles = await Client.GetPaginatedIncremental<MultipleArticles>(request, response => response.Articles?.Count() ?? 0);
-        var filtered = articles.SelectMany(x => x.Articles).AsEnumerable();
-
-        if (input.IncludeDrafts != true)
-            filtered = filtered.Where(a => !a.Draft);
-
-        if (input.Locale != null)
-            filtered = filtered.Where(a => a.Locale == input.Locale);
-
-        if (input.SectionIds != null && input.SectionIds.Any())
-            filtered = filtered.Where(a => input.SectionIds.Contains(a.SectionId));
-
-        // API query parameter for label_names does not work, that's why we'll do it manually
-        if (input.LabelNames != null && input.LabelNames.Any())
-            filtered = filtered.Where(a => a.Labels != null && a.Labels.Intersect(input.LabelNames).Any());
-
-        if (!string.IsNullOrEmpty(input.Query))
-        {
-            string searchString = input.Query.ToLowerInvariant();
-
-            filtered = filtered.Where(a =>
-                (!string.IsNullOrEmpty(a.Title) && a.Title.Contains(searchString, StringComparison.InvariantCultureIgnoreCase)) ||
-                (!string.IsNullOrEmpty(a.Body) && a.Body.Contains(searchString, StringComparison.InvariantCultureIgnoreCase))
-            );
-        }
-
-        if (input.CreatedAfter.HasValue)
-            filtered = filtered.Where(a => a.CreatedAt >= input.CreatedAfter.Value);
-
-        if (input.CreatedBefore.HasValue)
-            filtered = filtered.Where(a => a.CreatedAt <= input.CreatedBefore.Value);
-
-        if (input.CreatedAt.HasValue)
-            filtered = filtered.Where(a => a.CreatedAt.Date == input.CreatedAt.Value.Date);
-
-        if (input.UpdatedAfter.HasValue)
-            filtered = filtered.Where(a => a.UpdatedAt >= input.UpdatedAfter.Value);
-
-        if (input.UpdatedBefore.HasValue)
-            filtered = filtered.Where(a => a.UpdatedAt <= input.UpdatedBefore.Value);
-
-        if (input.UpdatedAt.HasValue)
-            filtered = filtered.Where(a => a.UpdatedAt.Date == input.UpdatedAt.Value.Date);
+        var filtered = articles.SelectMany(x => x.Articles)
+            .AsEnumerable()
+            .WhereEquals(input.IncludeDrafts, a => a.Draft)
+            .WhereEquals(input.Locale, a => a.Locale)
+            .WhereContains(input.SectionIds, a => a.SectionId)
+            .WhereIntersects(input.LabelNames, a => a.Labels)   // label_names param does not work, so filtering manually
+            .WhereDateAfter(input.CreatedAfter, a => a.CreatedAt)
+            .WhereDateBefore(input.CreatedBefore, a => a.CreatedAt)
+            .WhereDateIs(input.CreatedAt, a => a.CreatedAt)
+            .WhereDateAfter(input.UpdatedAfter, a => a.UpdatedAt)
+            .WhereDateBefore(input.UpdatedBefore, a => a.UpdatedAt)
+            .WhereDateIs(input.UpdatedAt, a => a.UpdatedAt)
+            .WhereAnyContains(input.Query, a => a.Title, a => a.Body);
 
         return new ListArticlesResponse { Articles = filtered.ToArray() };
     }

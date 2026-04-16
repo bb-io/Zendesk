@@ -1,3 +1,4 @@
+using Apps.Zendesk.Extensions;
 using Apps.Zendesk.Models.Responses;
 using Apps.Zendesk.Models.Responses.Wrappers;
 using Apps.Zendesk.Polling.Models;
@@ -28,16 +29,18 @@ public class PollingList(InvocationContext invocationContext) : BaseInvocable(in
             };
         }
 
-        var startTimeUnix = new DateTimeOffset(request.Memory.LastInteractionDate).ToUnixTimeSeconds();
+        long startTimeUnix = request.Memory.LastInteractionDate.ToUnixTimeSeconds();
         var endpoint = $"/api/v2/help_center/incremental/articles?start_time={startTimeUnix}";
         var articlesRequest = new ZendeskRequest(endpoint, Method.Get);
 
-        var response = (await Client.GetPaginated<MultipleArticles>(articlesRequest))
+        var articlesResponse = await Client.GetPaginatedIncremental<MultipleArticles>(
+            articlesRequest, 
+            r => r.Articles?.Count() ?? 0);
+        
+        var updatedArticles = articlesResponse
             .SelectMany(x => x.Articles)
-            .ToArray();
-
-        var updatedArticles = response
-            .Where(a => a.Labels != null && a.Labels.Intersect(input.Labels).Any())
+            .AsEnumerable()
+            .WhereIntersects(input.Labels, x => x.Labels)
             .ToArray();
 
         if (updatedArticles.Length == 0)
