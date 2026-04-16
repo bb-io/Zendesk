@@ -115,6 +115,37 @@ public class ZendeskClient : RestClient
         return results;
     }
 
+    // Incremental endpoints have a separate logic:
+    // they always return the next URL even though there are no more items to paginate.
+    // So we need to manually rely on the count of items
+    public async Task<List<T>> GetPaginatedIncremental<T>(
+        ZendeskRequest request,
+        Func<T, int> getItemCount,
+        int pageSize = 1000) where T : PaginatedResponse
+    {
+        request.AddQueryParameter("per_page", pageSize.ToString());
+
+        var results = new List<T>();
+        string? nextUrl = null;
+
+        do
+        {
+            if (nextUrl != null)
+                request = new ZendeskRequest(nextUrl, Method.Get);
+
+            var response = await ExecuteWithHandling<T>(request);
+            results.Add(response);
+
+            if (getItemCount(response) < pageSize)
+                break;
+
+            nextUrl = response.NextPage;
+
+        } while (!string.IsNullOrEmpty(nextUrl));
+
+        return results;
+    }
+
     public async Task<RestResponse> ExecuteWithHandling(RestRequest request, int maxRetries = DefaultMaxRetries)
     {
         int attempt = 0;

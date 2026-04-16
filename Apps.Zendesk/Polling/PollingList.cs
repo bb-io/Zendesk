@@ -1,9 +1,9 @@
+using Apps.Zendesk.Extensions;
 using Apps.Zendesk.Models.Responses;
 using Apps.Zendesk.Models.Responses.Wrappers;
 using Apps.Zendesk.Polling.Models;
 using Apps.Zendesk.Polling.Models.Memory;
 using Blackbird.Applications.Sdk.Common;
-using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Polling;
 using RestSharp;
@@ -11,66 +11,52 @@ using RestSharp;
 namespace Apps.Zendesk.Polling;
 
 [PollingEventList]
-public class PollingList : BaseInvocable
+public class PollingList(InvocationContext invocationContext) : BaseInvocable(invocationContext)
 {
-    private ZendeskClient Client { get; }
-
-    public PollingList(InvocationContext invocationContext)
-        : base(invocationContext)
-    {
-        Client = new ZendeskClient(invocationContext);
-    }
+    private ZendeskClient Client { get; } = new(invocationContext);
 
     [PollingEvent("On labels added to articles", "On labels are added to articles")]
-    public async Task<PollingEventResponse<ArticleLabelsMemory, ListArticlesResponse>> OnLabelsAddedToArticles(
-        PollingEventRequest<ArticleLabelsMemory> request,
+    public async Task<PollingEventResponse<DateMemory, ListArticlesResponse>> OnLabelsAddedToArticles(
+        PollingEventRequest<DateMemory> request,
         [PollingEventParameter] OnLabelsAddedInput input)
     {
-        var articlesRequest =
-            new ZendeskRequest($"/api/v2/help_center/articles?label_names={string.Join(',', input.Labels)}", Method.Get);
-        var response = (await Client.GetPaginated<MultipleArticles>(articlesRequest))
-            .SelectMany(x => x.Articles)
-            .ToArray();
-
-        var articleLabelsMap = response.ToDictionary(x => x.ContentId, x => x.Labels);
-
         if (request.Memory is null)
         {
             return new()
             {
                 FlyBird = false,
-                Memory = new()
-                {
-                    ArticleLabelsMap = articleLabelsMap
-                }
+                Memory = new() { LastInteractionDate = DateTime.UtcNow }
             };
         }
 
-        var updatedArticles = response.Where(x => !request.Memory.ArticleLabelsMap.Keys.Contains(x.ContentId)).ToArray();
+        long startTimeUnix = request.Memory.LastInteractionDate.ToUnixTimeSeconds();
+        var endpoint = $"/api/v2/help_center/incremental/articles?start_time={startTimeUnix}";
+        var articlesRequest = new ZendeskRequest(endpoint, Method.Get);
 
-        if (!updatedArticles.Any())
+        var articlesResponse = await Client.GetPaginatedIncremental<MultipleArticles>(
+            articlesRequest, 
+            r => r.Articles?.Count() ?? 0);
+        
+        var updatedArticles = articlesResponse
+            .SelectMany(x => x.Articles)
+            .AsEnumerable()
+            .WhereIntersects(input.Labels, x => x.Labels)
+            .ToArray();
+
+        if (updatedArticles.Length == 0)
         {
             return new()
             {
                 FlyBird = false,
-                Memory = new()
-                {
-                    ArticleLabelsMap = articleLabelsMap
-                }
+                Memory = new() { LastInteractionDate = DateTime.UtcNow }
             };
         }
 
         return new()
         {
             FlyBird = true,
-            Result = new()
-            {
-                Articles = updatedArticles
-            },
-            Memory = new()
-            {
-                ArticleLabelsMap = articleLabelsMap
-            }
+            Result = new() { Articles = updatedArticles },
+            Memory = new() { LastInteractionDate = DateTime.UtcNow }
         };
     }
 

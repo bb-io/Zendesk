@@ -1,17 +1,15 @@
 ﻿using Apps.Zendesk.DataSourceHandlers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Apps.Zendesk.Models.Requests;
 public class SearchArticlesRequest
 {
     [Display("Query", Description = "The search text to be matched or a search string. Examples: \"carrot potato\", \"'carrot potato'\".")]
     public string? Query { get; set; }
+
+    [Display("Include drafts", Description = "Default is false")]
+    public bool? IncludeDrafts { get; set; }
 
     [Display("Category IDs")]
     [DataSource(typeof(CategoryDataHandler))]
