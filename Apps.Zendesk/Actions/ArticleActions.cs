@@ -66,9 +66,13 @@ public class ArticleActions(InvocationContext invocationContext, IFileManagement
     }
 
     [Action("Get article metadata", Description = "Get metadata for a specific article")]
-    public async Task<ArticleWithMissingLocales> GetArticle([ActionParameter] ArticleIdentifier article)
+    public async Task<ArticleWithMissingLocales> GetArticle(
+        [ActionParameter] ArticleIdentifier article, [ActionParameter] OptionalLocaleRequest locale)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/articles/{article.ContentId}", Method.Get);
+        var endpoint = string.IsNullOrEmpty(locale.Locale)
+            ? $"/api/v2/help_center/articles/{article.ContentId}"
+            : $"/api/v2/help_center/{locale.Locale}/articles/{article.ContentId}";
+        var request = new ZendeskRequest(endpoint, Method.Get);
         var response = await Client.ExecuteWithHandling<SingleArticle>(request);
 
         var missingLocales = await GetArticleMissingTranslations(article);
