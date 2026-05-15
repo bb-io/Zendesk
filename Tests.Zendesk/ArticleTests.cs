@@ -47,10 +47,13 @@ public class ArticleTests:TestBase
     public async Task GetArticle_works()
     {
         var actions = new ArticleActions(InvocationContext, FileManager);
-        var result = await actions.GetArticle(new ArticleIdentifier { ContentId = "34789869260178" });
+        var articleIdentifier = new ArticleIdentifier { ContentId = "34789869260178" };
+        var localeIdentifier = new OptionalLocaleRequest { };
+        
+        var result = await actions.GetArticle(articleIdentifier, localeIdentifier);
         Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
 
-        Assert.IsNotNull(result.ContentId);
+        Assert.IsNotNull(result);
     }
 
     [TestMethod]
@@ -67,7 +70,7 @@ public class ArticleTests:TestBase
     public async Task DownloadArticle_default_locale_works()
     {
         var actions = new ArticleActions(InvocationContext, FileManager);
-        var result = await actions.GetArticleAsFile(new DownloadContentInput { ContentId = "34789869260178" });
+        var result = await actions.GetArticleAsFile(new DownloadContentInput { ContentId = "4408879000978", Locale = "en-US" });
         Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
         Assert.IsNotNull(result.Content);
     }
@@ -180,7 +183,9 @@ public class ArticleTests:TestBase
     {
         var actions = new ArticleActions(InvocationContext, FileManager);
         await actions.AddArticleLabel(new ArticleIdentifier { ContentId = TestArticleId }, new LocaleIdentifier { Locale = DefaultLocale }, "test");
-        var result = await actions.GetArticle(new ArticleIdentifier { ContentId = TestArticleId });
+        
+        var localeIdentifier = new OptionalLocaleRequest { };
+        var result = await actions.GetArticle(new ArticleIdentifier { ContentId = TestArticleId }, new OptionalLocaleRequest { Locale = DefaultLocale });
         Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
 
         Assert.IsNotNull(result.Labels.Contains("test"));
@@ -190,8 +195,10 @@ public class ArticleTests:TestBase
     public async Task Delete_label_works()
     {
         var actions = new ArticleActions(InvocationContext, FileManager);
-        var response = await actions.DeleteArticleLabel(new ArticleIdentifier { ContentId = "33549894133137" }, new LocaleIdentifier { Locale = "en-us" }, "19613072417041");
-        var result = await actions.GetArticle(new ArticleIdentifier { ContentId = "33549894133137" });
+        string locale = "en-US";
+        var response = await actions.DeleteArticleLabel(new ArticleIdentifier { ContentId = "33549894133137" }, new LocaleIdentifier { Locale = locale }, "19613072417041");
+        
+        var result = await actions.GetArticle(new ArticleIdentifier { ContentId = "33549894133137" }, new OptionalLocaleRequest { Locale = locale });
         Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
         Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
 

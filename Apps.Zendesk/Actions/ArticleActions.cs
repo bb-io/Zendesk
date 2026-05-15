@@ -180,8 +180,16 @@ public class ArticleActions(InvocationContext invocationContext, IFileManagement
         var request = new ZendeskRequest($"/api/v2/help_center/articles/{input.ContentId}/translations/{input.Locale}", Method.Get);
         var response = await Client.ExecuteWithHandling<SingleTranslation>(request);
 
-        var userRequest = new ZendeskRequest($"/api/v2/users/{response.Translation.UpdatedById}", Method.Get);
-        var userResponse = await Client.ExecuteWithHandling<SingleUser>(userRequest);
+        string itsRevPerson;
+        // The value of UpdatedById can sometimes be '-1' - this means Zendesk internal system performed an update
+        if (response.Translation.UpdatedById > 0)
+        {
+            var userRequest = new ZendeskRequest($"/api/v2/users/{response.Translation.UpdatedById}", Method.Get);
+            var userResponse = await Client.ExecuteWithHandling<SingleUser>(userRequest);
+            itsRevPerson = $"its-rev-person=\"{userResponse.User.Name}\"";
+        }
+        else
+            itsRevPerson = "its-rev-person=\"Zendesk System\"";
 
         var sb = new StringBuilder();
 
@@ -196,7 +204,7 @@ public class ArticleActions(InvocationContext invocationContext, IFileManagement
         sb.Append($"<meta name=\"blackbird-public-url\" content=\"{response.Translation.HtmlUrl}\">");
         sb.Append($"<meta name=\"blackbird-system-name\" content=\"Zendesk\">");
         sb.Append($"<meta name=\"blackbird-system-ref\" content=\"https://www.zendesk.com\">");
-        sb.Append($"</head><body its-rev-tool=\"Zendesk\" its-rev-tool-ref=\"https://www.zendesk.com\" its-rev-person=\"{userResponse.User.Name}\" >{response.Translation.Body}</body></html>");
+        sb.Append($"</head><body its-rev-tool=\"Zendesk\" its-rev-tool-ref=\"https://www.zendesk.com\" {itsRevPerson}>{response.Translation.Body}</body></html>");
 
         string htmlFile = sb.ToString();
 
