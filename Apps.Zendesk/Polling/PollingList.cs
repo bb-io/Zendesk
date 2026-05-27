@@ -16,47 +16,32 @@ public class PollingList(InvocationContext invocationContext) : BaseInvocable(in
     private ZendeskClient Client { get; } = new(invocationContext);
 
     [PollingEvent("On labels added to articles", "On labels are added to articles")]
-    public async Task<PollingEventResponse<DateMemory, ListArticlesResponse>> OnLabelsAddedToArticles(
-        PollingEventRequest<DateMemory> request,
+    public async Task<PollingEventResponse<ArticleLabelsMemory, ListArticlesResponse>> OnLabelsAddedToArticles(
+        PollingEventRequest<ArticleLabelsMemory> request,
         [PollingEventParameter] OnLabelsAddedInput input)
     {
-        if (request.Memory is null)
-        {
-            return new()
-            {
-                FlyBird = false,
-                Memory = new() { LastInteractionDate = DateTime.UtcNow }
-            };
-        }
+        long startTimeUnix = request.Memory is null
+            ? DateTime.UtcNow.ToUnixTimeSeconds()
+            : request.Memory.LastInteractionDate.ToUnixTimeSeconds();
 
-        long startTimeUnix = request.Memory.LastInteractionDate.ToUnixTimeSeconds();
         var endpoint = $"/api/v2/help_center/incremental/articles?start_time={startTimeUnix}";
-        var articlesRequest = new ZendeskRequest(endpoint, Method.Get);
-
         var articlesResponse = await Client.GetPaginatedIncremental<MultipleArticles>(
-            articlesRequest, 
+            new ZendeskRequest(endpoint, Method.Get),
             r => r.Articles?.Count() ?? 0);
-        
+
         var updatedArticles = articlesResponse
             .SelectMany(x => x.Articles)
-            .AsEnumerable()
-            .WhereIntersects(input.Labels, x => x.Labels)
             .ToArray();
 
-        if (updatedArticles.Length == 0)
-        {
-            return new()
-            {
-                FlyBird = false,
-                Memory = new() { LastInteractionDate = DateTime.UtcNow }
-            };
-        }
+        var previousLabels = request.Memory?.ArticleLabels ?? new Dictionary<string, List<string>>();
+        var (articlesWithLabelAdded, newMemory) = DetectNewlyLabeledArticles(updatedArticles, previousLabels, input.Labels);
 
+        var isFirstRun = request.Memory is null;
         return new()
         {
-            FlyBird = true,
-            Result = new() { Articles = updatedArticles },
-            Memory = new() { LastInteractionDate = DateTime.UtcNow }
+            FlyBird = !isFirstRun && articlesWithLabelAdded.Count > 0,
+            Result = !isFirstRun && articlesWithLabelAdded.Count > 0 ? new() { Articles = articlesWithLabelAdded } : null,
+            Memory = new() { LastInteractionDate = DateTime.UtcNow, ArticleLabels = newMemory }
         };
     }
 
@@ -112,5 +97,35 @@ public class PollingList(InvocationContext invocationContext) : BaseInvocable(in
             Memory = request.Memory,
             Result = new ListTicketsResponse { Tickets = newTickets }
         };
+    }
+
+    internal static (List<Article> Matches, Dictionary<string, List<string>> UpdatedMemory) DetectNewlyLabeledArticles(
+        Article[] updatedArticles,
+        Dictionary<string, List<string>> previousLabels,
+        IEnumerable<string>? targetLabels)
+    {
+        var targets = (targetLabels ?? Enumerable.Empty<string>()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var matches = new List<Article>();
+        var updatedMemory = new Dictionary<string, List<string>>(previousLabels);
+
+        foreach (var article in updatedArticles)
+        {
+            var current = (article.Labels ?? Enumerable.Empty<string>()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            if (previousLabels.TryGetValue(article.ContentId, out var known))
+            {
+                var knownSet = new HashSet<string>(known, StringComparer.OrdinalIgnoreCase);
+                bool newLabelAdded = targets.Count == 0
+                    ? current.Except(knownSet).Any()
+                    : current.Intersect(targets).Any(l => !knownSet.Contains(l));
+
+                if (newLabelAdded)
+                    matches.Add(article);
+            }
+
+            updatedMemory[article.ContentId] = current.ToList();
+        }
+
+        return (matches, updatedMemory);
     }
 }
