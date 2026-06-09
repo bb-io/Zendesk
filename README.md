@@ -184,7 +184,7 @@ This app supports two authentication methods: OAuth 2.0 and API Token. API Token
 
 ### Polling
 
-- **On labels added to articles** Triggers when labels are added to matching articles.
+- **On labels added to articles** Triggers when labels are added to matching articles. Optional **Deep search** flag queries articles by label name directly — enable this if label changes are not triggering the event on your Zendesk instance (some instances do not update `updated_at` when a label is added).
 - **On new tickets added** Triggers when new tickets are created.
 
 ## Example

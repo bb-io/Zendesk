@@ -29,10 +29,28 @@ public class PollingList(InvocationContext invocationContext) : BaseInvocable(in
             new ZendeskRequest(endpoint, Method.Get),
             r => r.Articles?.Count() ?? 0);
 
-        var updatedArticles = articlesResponse
+        var articleMap = articlesResponse
             .SelectMany(x => x.Articles)
-            .ToArray();
+            .ToDictionary(a => a.ContentId);
 
+        // Deep search: on some Zendesk instances label changes do not update updated_at,
+        // so the article never re-appears in the incremental feed. Querying by label directly
+        // catches those cases. Opt-in because it adds one API call per target label per run.
+        if (input.DeepSearch == true)
+        {
+            var targetLabels = (input.Labels ?? Enumerable.Empty<string>()).ToList();
+            foreach (var label in targetLabels)
+            {
+                var labelReq = new ZendeskRequest("/api/v2/help_center/articles", Method.Get);
+                labelReq.AddQueryParameter("label_names", label);
+                var labelPages = await Client.GetPaginatedIncremental<MultipleArticles>(
+                    labelReq, r => r.Articles?.Count() ?? 0, pageSize: 100);
+                foreach (var article in labelPages.SelectMany(p => p.Articles))
+                    articleMap[article.ContentId] = article;
+            }
+        }
+
+        var updatedArticles = articleMap.Values.ToArray();
         var previousLabels = request.Memory?.ArticleLabels ?? new Dictionary<string, List<string>>();
         var (articlesWithLabelAdded, newMemory) = DetectNewlyLabeledArticles(updatedArticles, previousLabels, input.Labels);
 
