@@ -1,32 +1,25 @@
-﻿using Apps.Zendesk.Models.Responses.Wrappers;
+﻿using Apps.Zendesk.Extensions;
+using Apps.Zendesk.Models.Responses.Wrappers;
 using Apps.Zendesk.Models.Responses;
+using Apps.Zendesk.Utils;
 using Apps.Zendesk.Webhooks.Handlers.ArticleHandlers;
-using Apps.Zendesk.Webhooks.Handlers.UserHandlers;
 using Apps.Zendesk.Webhooks.Input;
 using Apps.Zendesk.Webhooks.Payload;
 using Apps.Zendesk.Webhooks.Payload.Articles;
 using Apps.Zendesk.Webhooks.Responses;
 using Blackbird.Applications.Sdk.Common;
-using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
 using Newtonsoft.Json;
 using RestSharp;
 using Blackbird.Applications.SDK.Blueprints;
-using Apps.Zendesk.Models.Identifiers;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Apps.Zendesk.Webhooks;
 
 [WebhookList("Articles")]
-public class WebhookList : BaseInvocable
+public class WebhookList(InvocationContext invocationContext) : BaseInvocable(invocationContext)
 {
-    private ZendeskClient Client { get; }
-
-    public WebhookList(InvocationContext invocationContext) : base(invocationContext)
-    {
-        Client = new ZendeskClient(invocationContext);
-    }
+    private ZendeskClient Client { get; } = new(invocationContext);
 
     [Webhook("On article author changed", typeof(ArticleAuthorChangedHandler), Description = "On article author changed")]
     public async Task<WebhookResponse<AuthorChangedResponse>> ArticleAuthorChangedHandler(WebhookRequest webhookRequest, [WebhookParameter] ArticlePublishedInputParameter input)
@@ -95,73 +88,33 @@ public class WebhookList : BaseInvocable
         var data = JsonConvert.DeserializeObject<ArticlePayloadTemplate<PublishEvent>>(webhookRequest.Body.ToString());
         if (data is null) { throw new InvalidCastException(nameof(webhookRequest.Body)); }
 
-        if (input.BrandId != null && input.BrandId == data.Detail.BrandId)
+        if (input.BrandId.IsMismatchWith(data.Detail.BrandId) || input.AccountId.IsMismatchWith(data.AccountId.ToString()) || 
+            input.Locale.IsMismatchWith(data.Event.Locale) || input.ArticleId.IsMismatchWith(data.Detail.Id))
         {
-            return new WebhookResponse<ArticlePublishedResponse>
-            {
-                HttpResponseMessage = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                Result = null
-            };
+            return WebhookResponses.NoFlight<ArticlePublishedResponse>();
         }
 
-        if (input.AccountId != null && input.AccountId == data.AccountId.ToString())
+        ArticlePublishedResponse article;
+        try
         {
-            return new WebhookResponse<ArticlePublishedResponse>
-            {
-                HttpResponseMessage = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                Result = null
-            };
+            article = await CreatePublishedArticleResponse(data, data.Event.Locale);
+        }
+        // The Zendesk event stream is account-wide, but Help Center endpoints are scoped to the brand of the base URL
+        // Every brand connection receives this event. Only the owning one can fetch the article,
+        // so a 404 here means 'not my brand' and should skip, not throw:
+        catch (Exception ex) when (ex.Message.Contains("Error: RecordNotFound"))
+        {
+            InvocationContext.Logger?.LogWarning(
+                $"[ZendeskWebhooks] Skipping article '{data.Detail.Id}' - not found on '{Client.Options.BaseUrl?.Host}' (event brand '{data.Detail.BrandId}')",
+                []);
+            return WebhookResponses.NoFlight<ArticlePublishedResponse>();
         }
 
-        if (input.Locale != null && input.Locale != data.Event.Locale)
-        {
-            return new WebhookResponse<ArticlePublishedResponse>
-            {
-                HttpResponseMessage = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                Result = null
-            };
-        }
+        if (input.OnlyIfSource == true && !string.Equals(article.SourceLocale, data.Event.Locale, StringComparison.OrdinalIgnoreCase))
+            return WebhookResponses.NoFlight<ArticlePublishedResponse>();
 
-        if (input.ArticleId != null && input.ArticleId != data.Detail.Id)
-        {
-            return new WebhookResponse<ArticlePublishedResponse>
-            {
-                HttpResponseMessage = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                Result = null
-            };
-        }
-
-        var article = await CreatePublishedArticleResponse(data, data.Event.Locale);
-
-        if (input.OnlyIfSource != null && input.OnlyIfSource.Value)
-        {
-            if (article.SourceLocale != data.Event.Locale)
-            {
-                return new WebhookResponse<ArticlePublishedResponse>
-                {
-                    HttpResponseMessage = null,
-                    ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                    Result = null
-                };
-            }
-        }
-
-        if (input.RequiredLabel != null)
-        {
-            if (!article.Labels.Contains(input.RequiredLabel, StringComparer.OrdinalIgnoreCase))
-            {
-                return new WebhookResponse<ArticlePublishedResponse>
-                {
-                    HttpResponseMessage = null,
-                    ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                    Result = null
-                };
-            }
-        }
+        if (!string.IsNullOrWhiteSpace(input.RequiredLabel) && !article.Labels.Contains(input.RequiredLabel, StringComparer.OrdinalIgnoreCase))
+            return WebhookResponses.NoFlight<ArticlePublishedResponse>();
 
         return new WebhookResponse<ArticlePublishedResponse>
         {
