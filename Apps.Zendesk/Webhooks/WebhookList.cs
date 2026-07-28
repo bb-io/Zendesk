@@ -1,32 +1,26 @@
-﻿using Apps.Zendesk.Models.Responses.Wrappers;
+﻿using Apps.Zendesk.Extensions;
+using Apps.Zendesk.Models.Responses.Wrappers;
 using Apps.Zendesk.Models.Responses;
+using Apps.Zendesk.Utils;
 using Apps.Zendesk.Webhooks.Handlers.ArticleHandlers;
-using Apps.Zendesk.Webhooks.Handlers.UserHandlers;
 using Apps.Zendesk.Webhooks.Input;
 using Apps.Zendesk.Webhooks.Payload;
 using Apps.Zendesk.Webhooks.Payload.Articles;
 using Apps.Zendesk.Webhooks.Responses;
 using Blackbird.Applications.Sdk.Common;
-using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
 using Newtonsoft.Json;
 using RestSharp;
 using Blackbird.Applications.SDK.Blueprints;
-using Apps.Zendesk.Models.Identifiers;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 
 namespace Apps.Zendesk.Webhooks;
 
 [WebhookList("Articles")]
-public class WebhookList : BaseInvocable
+public class WebhookList(InvocationContext invocationContext) : BaseInvocable(invocationContext)
 {
-    private ZendeskClient Client { get; }
-
-    public WebhookList(InvocationContext invocationContext) : base(invocationContext)
-    {
-        Client = new ZendeskClient(invocationContext);
-    }
+    private ZendeskClient Client { get; } = new(invocationContext);
 
     [Webhook("On article author changed", typeof(ArticleAuthorChangedHandler), Description = "On article author changed")]
     public async Task<WebhookResponse<AuthorChangedResponse>> ArticleAuthorChangedHandler(WebhookRequest webhookRequest, [WebhookParameter] ArticlePublishedInputParameter input)
@@ -93,110 +87,86 @@ public class WebhookList : BaseInvocable
         [WebhookParameter] ArticlePublishedInputParameter input)
     {
         var data = JsonConvert.DeserializeObject<ArticlePayloadTemplate<PublishEvent>>(webhookRequest.Body.ToString());
-        if (data is null) { throw new InvalidCastException(nameof(webhookRequest.Body)); }
-
-        if (input.BrandId != null && input.BrandId == data.Detail.BrandId)
+        if (data is null)
         {
-            return new WebhookResponse<ArticlePublishedResponse>
-            {
-                HttpResponseMessage = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                Result = null
-            };
+            InvocationContext.Logger?.LogError(
+                $"[ZendeskWebhooks] Couldn't deserialize event payload. Raw: {webhookRequest.Body}", 
+                []);
+            throw new PluginApplicationException("An error occured while trying to deserialize the webhook response from Zendesk");
         }
 
-        if (input.AccountId != null && input.AccountId == data.AccountId.ToString())
+        if (input.BrandId.IsMismatchWith(data.Detail.BrandId) || input.AccountId.IsMismatchWith(data.AccountId.ToString()) || 
+            input.Locale.IsMismatchWith(data.Event.Locale) || input.ArticleId.IsMismatchWith(data.Detail.Id))
         {
-            return new WebhookResponse<ArticlePublishedResponse>
-            {
-                HttpResponseMessage = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                Result = null
-            };
+            return WebhookResponses.NoFlight<ArticlePublishedResponse>();
         }
 
-        if (input.Locale != null && input.Locale != data.Event.Locale)
+        var article = await TryGetArticle(data.Detail.Id, data.Event.Locale);
+        if (article is null)
         {
-            return new WebhookResponse<ArticlePublishedResponse>
-            {
-                HttpResponseMessage = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                Result = null
-            };
+            LogBrandSkip(data.Detail.Id, data.Detail.BrandId);
+            return WebhookResponses.NoFlight<ArticlePublishedResponse>();
         }
 
-        if (input.ArticleId != null && input.ArticleId != data.Detail.Id)
-        {
-            return new WebhookResponse<ArticlePublishedResponse>
-            {
-                HttpResponseMessage = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                Result = null
-            };
-        }
+        if (input.OnlyIfSource == true && !string.Equals(article.SourceLocale, data.Event.Locale, StringComparison.OrdinalIgnoreCase))
+            return WebhookResponses.NoFlight<ArticlePublishedResponse>();
 
-        var article = await CreatePublishedArticleResponse(data, data.Event.Locale);
+        if (!string.IsNullOrWhiteSpace(input.RequiredLabel) && !(article.Labels ?? []).Contains(input.RequiredLabel, StringComparer.OrdinalIgnoreCase))
+            return WebhookResponses.NoFlight<ArticlePublishedResponse>();
 
-        if (input.OnlyIfSource != null && input.OnlyIfSource.Value)
-        {
-            if (article.SourceLocale != data.Event.Locale)
-            {
-                return new WebhookResponse<ArticlePublishedResponse>
-                {
-                    HttpResponseMessage = null,
-                    ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                    Result = null
-                };
-            }
-        }
-
-        if (input.RequiredLabel != null)
-        {
-            if (!article.Labels.Contains(input.RequiredLabel, StringComparer.OrdinalIgnoreCase))
-            {
-                return new WebhookResponse<ArticlePublishedResponse>
-                {
-                    HttpResponseMessage = null,
-                    ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                    Result = null
-                };
-            }
-        }
-
+        var result = await CreatePublishedArticleResponse(data, article);
         return new WebhookResponse<ArticlePublishedResponse>
         {
             HttpResponseMessage = null,
-            Result = article,
+            Result = result,
         };
     }
 
-    private async Task<MissingLocales> GetArticleMissingTranslations(string articleId)
+    private void LogBrandSkip(string articleId, string? brandId)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/articles/{articleId}/translations/missing", Method.Get);
-        return await Client.ExecuteWithHandling<MissingLocales>(request);
+        InvocationContext.Logger?.LogWarning(
+            $"[ZendeskWebhooks] Skipping article '{articleId}' - not found on '{Client.Options.BaseUrl?.Host}' (event brand '{brandId}')",
+            []);
     }
 
-    public async Task<ArticlePublishedResponse> CreatePublishedArticleResponse<T>(ArticlePayloadTemplate<T> data, string? locale = null)
+    private async Task<ArticleWithMissingLocales?> TryGetArticle(string articleId, string? locale = null)
     {
-        var request = !string.IsNullOrWhiteSpace(locale)
-               ? new ZendeskRequest($"/api/v2/help_center/{locale}/articles/{data.Detail.Id}", Method.Get)
-               : new ZendeskRequest($"/api/v2/help_center/articles/{data.Detail.Id}", Method.Get);
-        var response = await Client.ExecuteWithHandling<SingleArticle>(request);
-        var missingLocales = await GetArticleMissingTranslations(data.Detail.Id);
+        string endpoint = string.IsNullOrWhiteSpace(locale)
+            ? $"/api/v2/help_center/articles/{articleId}"
+            : $"/api/v2/help_center/{locale}/articles/{articleId}";
+        var request = new ZendeskRequest(endpoint, Method.Get);
+
+        try
+        {
+            var response = await Client.ExecuteWithHandling<SingleArticle>(request);
+            return response.Article;
+        }
+        catch (Exception ex) when (ex.Message.Contains("Error: RecordNotFound"))
+        {
+            return null;
+        }
+    }
+
+    private async Task<ArticlePublishedResponse> CreatePublishedArticleResponse<T>(
+        ArticlePayloadTemplate<T> data, 
+        ArticleWithMissingLocales article)
+    {
+        var missingLocalesRequest = new ZendeskRequest($"/api/v2/help_center/articles/{data.Detail.Id}/translations/missing", Method.Get);
+        var missingLocales = await Client.ExecuteWithHandling<MissingLocales>(missingLocalesRequest);
 
         return new ArticlePublishedResponse
         {
             ContentId = data.Detail.Id,
-            AuthorId = response?.Article.AuthorId,
-            Locale = response?.Article.Locale,
-            SectionId = response?.Article.SectionId,
-            Title = response?.Article.Title,
+            AuthorId = article.AuthorId,
+            Locale = article.Locale,
+            SectionId = article.SectionId,
+            Title = article.Title,
             BrandId = data.Detail.BrandId,
             AccountId = data.AccountId.ToString(),
-            Labels = response?.Article.Labels?.ToList() ?? [],
-            OutdatedLocales = response?.Article.OutdatedLocales?.ToList() ?? [],
-            MissingLocales = missingLocales.Locales,
-            SourceLocale = response?.Article?.SourceLocale,
+            Labels = article.Labels?.ToList() ?? [],
+            OutdatedLocales = article.OutdatedLocales?.ToList() ?? [],
+            MissingLocales = missingLocales.Locales?.ToList() ?? [],
+            SourceLocale = article?.SourceLocale,
         };
     }
 
@@ -219,63 +189,42 @@ public class WebhookList : BaseInvocable
     }
 
     [Webhook("On article unpublished", typeof(ArticleUnpublishedHandler), Description = "On article unpublished")]
-    public async Task<WebhookResponse<ArticlePublishedResponse>> ArticleUnpublishedHandler(WebhookRequest webhookRequest, [WebhookParameter] ArticlePublishedInputParameter input)
+    public async Task<WebhookResponse<ArticlePublishedResponse>> ArticleUnpublishedHandler(
+        WebhookRequest webhookRequest, 
+        [WebhookParameter] ArticlePublishedInputParameter input)
     {
         var data = JsonConvert.DeserializeObject<ArticlePayloadTemplate<EmptyEvent>>(webhookRequest.Body.ToString());
         if (data is null)
         {
-            throw new InvalidCastException(nameof(webhookRequest.Body));
+            InvocationContext.Logger?.LogError(
+                $"[ZendeskWebhooks] Couldn't deserialize event payload. Raw: {webhookRequest.Body}", 
+                []);
+            throw new PluginApplicationException("An error occured while trying to deserialize the webhook response from Zendesk");
         }
 
-        if (input.BrandId != null && input.BrandId == data.Detail.BrandId)
+        if (input.BrandId.IsMismatchWith(data.Detail.BrandId) || 
+            input.AccountId.IsMismatchWith(data.AccountId.ToString()) || 
+            input.ArticleId.IsMismatchWith(data.Detail.Id))
         {
-            return new WebhookResponse<ArticlePublishedResponse>
-            {
-                HttpResponseMessage = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                Result = null
-            };
+            return WebhookResponses.NoFlight<ArticlePublishedResponse>();
         }
-
-        if (input.AccountId != null && input.AccountId == data.AccountId.ToString())
+        
+        var article = await TryGetArticle(data.Detail.Id);
+        if (article is null)
         {
-            return new WebhookResponse<ArticlePublishedResponse>
-            {
-                HttpResponseMessage = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                Result = null
-            };
+            LogBrandSkip(data.Detail.Id, data.Detail.BrandId);
+            return WebhookResponses.NoFlight<ArticlePublishedResponse>();
         }
 
-        if (input.ArticleId != null && input.ArticleId != data.Detail.Id)
-        {
-            return new WebhookResponse<ArticlePublishedResponse>
-            {
-                HttpResponseMessage = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                Result = null
-            };
-        }
+        if (!string.IsNullOrWhiteSpace(input.RequiredLabel) && !(article.Labels ?? []).Contains(input.RequiredLabel, StringComparer.OrdinalIgnoreCase))
+            return WebhookResponses.NoFlight<ArticlePublishedResponse>();
 
-        var article = await CreatePublishedArticleResponse(data);
-
-        if (input.RequiredLabel != null)
-        {
-            if (!article.Labels.Contains(input.RequiredLabel, StringComparer.OrdinalIgnoreCase))
-            {
-                return new WebhookResponse<ArticlePublishedResponse>
-                {
-                    HttpResponseMessage = null,
-                    ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                    Result = null
-                };
-            }
-        }
+        var response = await CreatePublishedArticleResponse(data, article);
 
         return new WebhookResponse<ArticlePublishedResponse>
         {
             HttpResponseMessage = null,
-            Result = article
+            Result = response
         };
     }
 

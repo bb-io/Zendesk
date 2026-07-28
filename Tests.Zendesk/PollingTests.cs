@@ -13,9 +13,9 @@ public class PollingTests : TestBase
     {
         var pollingList = new Apps.Zendesk.Polling.PollingList(InvocationContext);
         var input = new OnLabelsAddedInput { Labels = ["Loc MT"] };
-        var request = new PollingEventRequest<DateMemory>
+        var request = new PollingEventRequest<ArticleLabelsMemory>
         {
-            Memory = new DateMemory { LastInteractionDate = new DateTime(2026, 04, 11, 9, 0, 0, DateTimeKind.Utc) }
+            
         };
         var response = await pollingList.OnLabelsAddedToArticles(request, input);
         var json = System.Text.Json.JsonSerializer.Serialize(response, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
