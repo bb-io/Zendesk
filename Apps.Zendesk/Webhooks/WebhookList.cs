@@ -13,6 +13,7 @@ using Blackbird.Applications.Sdk.Common.Webhooks;
 using Newtonsoft.Json;
 using RestSharp;
 using Blackbird.Applications.SDK.Blueprints;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 
 namespace Apps.Zendesk.Webhooks;
 
@@ -86,7 +87,13 @@ public class WebhookList(InvocationContext invocationContext) : BaseInvocable(in
         [WebhookParameter] ArticlePublishedInputParameter input)
     {
         var data = JsonConvert.DeserializeObject<ArticlePayloadTemplate<PublishEvent>>(webhookRequest.Body.ToString());
-        if (data is null) { throw new InvalidCastException(nameof(webhookRequest.Body)); }
+        if (data is null)
+        {
+            InvocationContext.Logger?.LogError(
+                $"[ZendeskWebhooks] Couldn't deserialize event payload. Raw: {webhookRequest.Body}", 
+                []);
+            throw new PluginApplicationException("An error occured while trying to deserialize the webhook response from Zendesk");
+        }
 
         if (input.BrandId.IsMismatchWith(data.Detail.BrandId) || input.AccountId.IsMismatchWith(data.AccountId.ToString()) || 
             input.Locale.IsMismatchWith(data.Event.Locale) || input.ArticleId.IsMismatchWith(data.Detail.Id))
@@ -94,62 +101,72 @@ public class WebhookList(InvocationContext invocationContext) : BaseInvocable(in
             return WebhookResponses.NoFlight<ArticlePublishedResponse>();
         }
 
-        ArticlePublishedResponse article;
-        try
+        var article = await TryGetArticle(data.Detail.Id, data.Event.Locale);
+        if (article is null)
         {
-            article = await CreatePublishedArticleResponse(data, data.Event.Locale);
-        }
-        // The Zendesk event stream is account-wide, but Help Center endpoints are scoped to the brand of the base URL
-        // Every brand connection receives this event. Only the owning one can fetch the article,
-        // so a 404 here means 'not my brand' and should skip, not throw:
-        catch (Exception ex) when (ex.Message.Contains("Error: RecordNotFound"))
-        {
-            InvocationContext.Logger?.LogWarning(
-                $"[ZendeskWebhooks] Skipping article '{data.Detail.Id}' - not found on '{Client.Options.BaseUrl?.Host}' (event brand '{data.Detail.BrandId}')",
-                []);
+            LogBrandSkip(data.Detail.Id, data.Detail.BrandId);
             return WebhookResponses.NoFlight<ArticlePublishedResponse>();
         }
 
         if (input.OnlyIfSource == true && !string.Equals(article.SourceLocale, data.Event.Locale, StringComparison.OrdinalIgnoreCase))
             return WebhookResponses.NoFlight<ArticlePublishedResponse>();
 
-        if (!string.IsNullOrWhiteSpace(input.RequiredLabel) && !article.Labels.Contains(input.RequiredLabel, StringComparer.OrdinalIgnoreCase))
+        if (!string.IsNullOrWhiteSpace(input.RequiredLabel) && !(article.Labels ?? []).Contains(input.RequiredLabel, StringComparer.OrdinalIgnoreCase))
             return WebhookResponses.NoFlight<ArticlePublishedResponse>();
 
+        var result = await CreatePublishedArticleResponse(data, article);
         return new WebhookResponse<ArticlePublishedResponse>
         {
             HttpResponseMessage = null,
-            Result = article,
+            Result = result,
         };
     }
 
-    private async Task<MissingLocales> GetArticleMissingTranslations(string articleId)
+    private void LogBrandSkip(string articleId, string? brandId)
     {
-        var request = new ZendeskRequest($"/api/v2/help_center/articles/{articleId}/translations/missing", Method.Get);
-        return await Client.ExecuteWithHandling<MissingLocales>(request);
+        InvocationContext.Logger?.LogWarning(
+            $"[ZendeskWebhooks] Skipping article '{articleId}' - not found on '{Client.Options.BaseUrl?.Host}' (event brand '{brandId}')",
+            []);
     }
 
-    public async Task<ArticlePublishedResponse> CreatePublishedArticleResponse<T>(ArticlePayloadTemplate<T> data, string? locale = null)
+    private async Task<ArticleWithMissingLocales?> TryGetArticle(string articleId, string? locale = null)
     {
-        var request = !string.IsNullOrWhiteSpace(locale)
-               ? new ZendeskRequest($"/api/v2/help_center/{locale}/articles/{data.Detail.Id}", Method.Get)
-               : new ZendeskRequest($"/api/v2/help_center/articles/{data.Detail.Id}", Method.Get);
-        var response = await Client.ExecuteWithHandling<SingleArticle>(request);
-        var missingLocales = await GetArticleMissingTranslations(data.Detail.Id);
+        string endpoint = string.IsNullOrWhiteSpace(locale)
+            ? $"/api/v2/help_center/articles/{articleId}"
+            : $"/api/v2/help_center/{locale}/articles/{articleId}";
+        var request = new ZendeskRequest(endpoint, Method.Get);
+
+        try
+        {
+            var response = await Client.ExecuteWithHandling<SingleArticle>(request);
+            return response.Article;
+        }
+        catch (Exception ex) when (ex.Message.Contains("Error: RecordNotFound"))
+        {
+            return null;
+        }
+    }
+
+    private async Task<ArticlePublishedResponse> CreatePublishedArticleResponse<T>(
+        ArticlePayloadTemplate<T> data, 
+        ArticleWithMissingLocales article)
+    {
+        var missingLocalesRequest = new ZendeskRequest($"/api/v2/help_center/articles/{data.Detail.Id}/translations/missing", Method.Get);
+        var missingLocales = await Client.ExecuteWithHandling<MissingLocales>(missingLocalesRequest);
 
         return new ArticlePublishedResponse
         {
             ContentId = data.Detail.Id,
-            AuthorId = response?.Article.AuthorId,
-            Locale = response?.Article.Locale,
-            SectionId = response?.Article.SectionId,
-            Title = response?.Article.Title,
+            AuthorId = article.AuthorId,
+            Locale = article.Locale,
+            SectionId = article.SectionId,
+            Title = article.Title,
             BrandId = data.Detail.BrandId,
             AccountId = data.AccountId.ToString(),
-            Labels = response?.Article.Labels?.ToList() ?? [],
-            OutdatedLocales = response?.Article.OutdatedLocales?.ToList() ?? [],
+            Labels = article.Labels?.ToList() ?? [],
+            OutdatedLocales = article.OutdatedLocales?.ToList() ?? [],
             MissingLocales = missingLocales.Locales,
-            SourceLocale = response?.Article?.SourceLocale,
+            SourceLocale = article?.SourceLocale,
         };
     }
 
@@ -172,63 +189,42 @@ public class WebhookList(InvocationContext invocationContext) : BaseInvocable(in
     }
 
     [Webhook("On article unpublished", typeof(ArticleUnpublishedHandler), Description = "On article unpublished")]
-    public async Task<WebhookResponse<ArticlePublishedResponse>> ArticleUnpublishedHandler(WebhookRequest webhookRequest, [WebhookParameter] ArticlePublishedInputParameter input)
+    public async Task<WebhookResponse<ArticlePublishedResponse>> ArticleUnpublishedHandler(
+        WebhookRequest webhookRequest, 
+        [WebhookParameter] ArticlePublishedInputParameter input)
     {
         var data = JsonConvert.DeserializeObject<ArticlePayloadTemplate<EmptyEvent>>(webhookRequest.Body.ToString());
         if (data is null)
         {
-            throw new InvalidCastException(nameof(webhookRequest.Body));
+            InvocationContext.Logger?.LogError(
+                $"[ZendeskWebhooks] Couldn't deserialize event payload. Raw: {webhookRequest.Body}", 
+                []);
+            throw new PluginApplicationException("An error occured while trying to deserialize the webhook response from Zendesk");
         }
 
-        if (input.BrandId != null && input.BrandId == data.Detail.BrandId)
+        if (input.BrandId.IsMismatchWith(data.Detail.BrandId) || 
+            input.AccountId.IsMismatchWith(data.AccountId.ToString()) || 
+            input.ArticleId.IsMismatchWith(data.Detail.Id))
         {
-            return new WebhookResponse<ArticlePublishedResponse>
-            {
-                HttpResponseMessage = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                Result = null
-            };
+            return WebhookResponses.NoFlight<ArticlePublishedResponse>();
         }
-
-        if (input.AccountId != null && input.AccountId == data.AccountId.ToString())
+        
+        var article = await TryGetArticle(data.Detail.Id);
+        if (article is null)
         {
-            return new WebhookResponse<ArticlePublishedResponse>
-            {
-                HttpResponseMessage = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                Result = null
-            };
+            LogBrandSkip(data.Detail.Id, data.Detail.BrandId);
+            return WebhookResponses.NoFlight<ArticlePublishedResponse>();
         }
 
-        if (input.ArticleId != null && input.ArticleId != data.Detail.Id)
-        {
-            return new WebhookResponse<ArticlePublishedResponse>
-            {
-                HttpResponseMessage = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                Result = null
-            };
-        }
+        if (!string.IsNullOrWhiteSpace(input.RequiredLabel) && !(article.Labels ?? []).Contains(input.RequiredLabel, StringComparer.OrdinalIgnoreCase))
+            return WebhookResponses.NoFlight<ArticlePublishedResponse>();
 
-        var article = await CreatePublishedArticleResponse(data);
-
-        if (input.RequiredLabel != null)
-        {
-            if (!article.Labels.Contains(input.RequiredLabel, StringComparer.OrdinalIgnoreCase))
-            {
-                return new WebhookResponse<ArticlePublishedResponse>
-                {
-                    HttpResponseMessage = null,
-                    ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-                    Result = null
-                };
-            }
-        }
+        var response = await CreatePublishedArticleResponse(data, article);
 
         return new WebhookResponse<ArticlePublishedResponse>
         {
             HttpResponseMessage = null,
-            Result = article
+            Result = response
         };
     }
 
