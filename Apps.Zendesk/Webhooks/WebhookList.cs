@@ -165,7 +165,7 @@ public class WebhookList(InvocationContext invocationContext) : BaseInvocable(in
             AccountId = data.AccountId.ToString(),
             Labels = article.Labels?.ToList() ?? [],
             OutdatedLocales = article.OutdatedLocales?.ToList() ?? [],
-            MissingLocales = missingLocales.Locales,
+            MissingLocales = missingLocales.Locales?.ToList() ?? [],
             SourceLocale = article?.SourceLocale,
         };
     }
