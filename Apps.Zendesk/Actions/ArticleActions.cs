@@ -254,7 +254,7 @@ public class ArticleActions(InvocationContext invocationContext, IFileManagement
             if (html == null) throw new PluginMisconfigurationException("XLIFF did not contain any files");
         }
 
-        var articleId = input.ContentId ?? FileTranslationRequest.ExtractBlackbirdId(html) ?? throw new PluginMisconfigurationException("Blackbird reference ID not found in the file and no article ID provided. Did you use a content file downloaded through Blackbird?");
+        var articleId = !String.IsNullOrEmpty(input.ContentId)? input.ContentId : FileTranslationRequest.ExtractBlackbirdId(html) ?? throw new PluginMisconfigurationException("Blackbird reference ID not found in the file and no article ID provided. Did you use a content file downloaded through Blackbird?");
         var articleRequest = new ArticleIdentifier { ContentId = articleId };
         
         var missingLocales = await GetArticleMissingTranslations(articleRequest);
