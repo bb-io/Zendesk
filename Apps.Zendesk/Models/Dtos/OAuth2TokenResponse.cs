@@ -17,12 +17,16 @@ public class OAuth2TokenResponse
         var dict = new Dictionary<string, string?>
         {
             { "access_token", AccessToken },
-            { "refresh_token", RefreshToken },
             { "token_type", TokenType },
             { "scope", Scope },
             { "expires_in", ExpiresIn.ToString() },
             { "refresh_token_expires_in", RefreshTokenExpiresIn?.ToString() }
         };
+
+        // Never emit a null refresh token: it would overwrite the stored one and leave the connection unrenewable.
+        if (!string.IsNullOrWhiteSpace(RefreshToken))
+            dict[CredNames.RefreshToken] = RefreshToken;
+
         if (ExpiresAt.HasValue)
             dict[CredNames.ExpiresAt] = ExpiresAt.Value.ToString("O");
 
@@ -31,11 +35,12 @@ public class OAuth2TokenResponse
 
     public static OAuth2TokenResponse FromTokenDto(TokenDto tokenDto)
     {
-        DateTime? expiresAt;
-        if (tokenDto.ExpiresIn == null)
-            expiresAt = DateTime.UtcNow.AddSeconds(tokenDto.RefreshTokenExpiresIn!.Value);
-        else
+        // Zendesk omits both fields for non-expiring tokens, in which case there is no expiry to store.
+        DateTime? expiresAt = null;
+        if (tokenDto.ExpiresIn.HasValue)
             expiresAt = DateTime.UtcNow.AddSeconds(tokenDto.ExpiresIn.Value);
+        else if (tokenDto.RefreshTokenExpiresIn.HasValue)
+            expiresAt = DateTime.UtcNow.AddSeconds(tokenDto.RefreshTokenExpiresIn.Value);
 
         return new OAuth2TokenResponse
         {

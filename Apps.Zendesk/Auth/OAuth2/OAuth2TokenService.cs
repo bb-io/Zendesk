@@ -3,8 +3,10 @@ using Apps.Zendesk.Constants;
 using Apps.Zendesk.Models.Dtos;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Authentication;
+using System.Globalization;
 
 namespace Apps.Zendesk.Auth.OAuth2;
 
@@ -16,13 +18,21 @@ public class OAuth2TokenService(InvocationContext invocationContext)
 
     public bool IsRefreshToken(Dictionary<string, string> values)
     {
+        // API-token connections and legacy OAuth connections hold no refresh token, so a refresh can only ever fail.
+        if (!values.TryGetValue(CredNames.RefreshToken, out var storedRefreshToken) ||
+            string.IsNullOrWhiteSpace(storedRefreshToken))
+        {
+            LogInfo("No refresh token stored for this connection, skipping refresh");
+            return false;
+        }
+
         if (!values.TryGetValue(CredNames.ExpiresAt, out var expiresAtString) || string.IsNullOrEmpty(expiresAtString))
         {
             LogInfo("Token expiration info not found, refresh required");
             return true;
         }
 
-        if (!DateTime.TryParse(expiresAtString, out var expiresAt))
+        if (!TryParseExpiresAtUtc(expiresAtString, out var expiresAt))
         {
             LogWarning($"Failed to parse expires_at: {expiresAtString}");
             return true;
@@ -44,7 +54,7 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         if (!values.TryGetValue(CredNames.ExpiresAt, out var expireValue))
             return null;
 
-        if (!DateTime.TryParse(expireValue, out var expireDate))
+        if (!TryParseExpiresAtUtc(expireValue, out var expireDate))
             return null;
 
         var difference = expireDate - DateTime.UtcNow;
@@ -58,9 +68,11 @@ public class OAuth2TokenService(InvocationContext invocationContext)
 
         try
         {
-            if (!values.TryGetValue(CredNames.RefreshToken, out var refreshToken) || string.IsNullOrEmpty(refreshToken))
+            if (!values.TryGetValue(CredNames.RefreshToken, out var refreshToken) || string.IsNullOrWhiteSpace(refreshToken))
             {
-                throw new InvalidOperationException("Refresh token not found in credentials");
+                throw new PluginMisconfigurationException(
+                    "The Zendesk connection has no refresh token stored, so it cannot be renewed automatically. " +
+                    "Please reconnect your Zendesk connection.");
             }
 
             var tokenUrl = GetTokenUrl(values);
@@ -75,8 +87,15 @@ public class OAuth2TokenService(InvocationContext invocationContext)
             };
 
             var tokenResponse = await ExecuteTokenRequestAsync(request, tokenUrl, cancellationToken);
-            LogInfo($"Token refreshed successfully, expires at: {tokenResponse.ExpiresAt:O}");            
-            return tokenResponse.ToDictionary();
+            var result = tokenResponse.ToDictionary();
+
+            // Zendesk does not always rotate the refresh token; keep the working one so the connection stays renewable.
+            var refreshTokenReturned = result.ContainsKey(CredNames.RefreshToken);
+            if (!refreshTokenReturned)
+                result[CredNames.RefreshToken] = refreshToken;
+
+            LogInfo($"Token refreshed successfully, expires at: {tokenResponse.ExpiresAt:O}, refresh token rotated: {refreshTokenReturned}");
+            return result;
         }
         catch (Exception e)
         {
@@ -162,6 +181,15 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         var uri = new Uri(endpoint);
         var baseUrl = uri.GetLeftPart(UriPartial.Authority).TrimEnd('/');
         return $"{baseUrl}/oauth/tokens";
+    }
+
+    private static bool TryParseExpiresAtUtc(string value, out DateTime expiresAtUtc)
+    {
+        // expires_at is stored in UTC; without these styles a round-trip ("O") value would be converted to local time.
+        const DateTimeStyles styles = DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal;
+
+        return DateTime.TryParse(value, CultureInfo.InvariantCulture, styles, out expiresAtUtc)
+               || DateTime.TryParse(value, CultureInfo.CurrentCulture, styles, out expiresAtUtc);
     }
 
     #region Logging Methods
