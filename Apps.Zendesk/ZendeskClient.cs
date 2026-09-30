@@ -207,9 +207,20 @@ public class ZendeskClient : RestClient
     {
         var response = await ExecuteWithHandling(request);
 
+        if (string.IsNullOrWhiteSpace(response.Content))
+        {
+            throw new PluginApplicationException(
+                $"Zendesk returned an empty successful response while {typeof(T).Name} JSON was expected. " +
+                $"HTTP status: {(int)response.StatusCode} {response.StatusCode}");
+        }
+
         try
         {
-            return JsonConvert.DeserializeObject<T>(response.Content!)!;
+            var result = JsonConvert.DeserializeObject<T>(response.Content);
+
+            return result ?? throw new PluginApplicationException(
+                $"Zendesk returned JSON null while {typeof(T).Name} was expected. " +
+                $"HTTP status: {(int)response.StatusCode} {response.StatusCode}");
         }
         catch (JsonException ex)
         {
