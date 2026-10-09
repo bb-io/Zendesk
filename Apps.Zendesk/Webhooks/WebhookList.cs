@@ -108,7 +108,7 @@ public class WebhookList(InvocationContext invocationContext) : BaseInvocable(in
             return WebhookResponses.NoFlight<ArticlePublishedResponse>();
         }
 
-        if (input.OnlyIfSource == true && !string.Equals(article.SourceLocale, data.Event.Locale, StringComparison.OrdinalIgnoreCase))
+        if (input.OnlyIfSource != false && !string.Equals(article.SourceLocale, data.Event.Locale, StringComparison.OrdinalIgnoreCase))
             return WebhookResponses.NoFlight<ArticlePublishedResponse>();
 
         if (!string.IsNullOrWhiteSpace(input.RequiredLabel) && !(article.Labels ?? []).Contains(input.RequiredLabel, StringComparer.OrdinalIgnoreCase))

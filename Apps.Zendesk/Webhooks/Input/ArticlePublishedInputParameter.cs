@@ -1,12 +1,13 @@
 ﻿using Apps.Zendesk.DataSourceHandlers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
+using System.ComponentModel;
 
 namespace Apps.Zendesk.Webhooks.Input;
 
 public class ArticlePublishedInputParameter
 {
-    [Display("Only source articles")]
+    [Display("Only source articles", Description = "Defaults to true")]
     public bool? OnlyIfSource { get; set; }
 
     [Display("Brand ID")]
