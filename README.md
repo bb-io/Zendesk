@@ -50,6 +50,16 @@ This app supports two authentication methods: OAuth 2.0 and API Token. API Token
 
 ## Actions
 
+### Dynamic content
+
+Dynamic Content requires permission to manage Dynamic Content in Zendesk Support. Its languages come from the Support locale list, which can differ from the Help Center language list.
+
+- **Search dynamic content** returns all items, or items whose names or placeholders contain the optional query. Results include variants and their outdated status.
+- **Find dynamic content** looks up an item by ID or by exact placeholder. Provide one of these inputs. Placeholder forms such as `hc_toggle_theme`, `dc.hc_toggle_theme`, and `{{dc.hc_toggle_theme}}` are accepted.
+- **Download dynamic content** exports one variant as an HTML file. The source language defaults to the item's default language. Choose **Text** (the default) for literal text and line breaks, or **HTML** for markup. The file retains the item's identity and placeholder without translating them.
+- **Upload dynamic content** accepts a translated HTML or XLIFF file. Set the target language explicitly unless it is present as target-language metadata in the file. The language must be enabled in Zendesk Support. The action updates an existing variant or creates one if necessary; identical content and settings do not cause a write. Existing active and default settings are preserved unless an active override is provided. New variants are active by default. The returned file carries the resulting target reference.
+
+
 ### Articles
 
 - **Search articles** Search articles using filters.
