@@ -3,8 +3,8 @@ using Apps.Zendesk.Models.Blueprints;
 using Apps.Zendesk.Models.Identifiers;
 using Apps.Zendesk.Models.Requests;
 using Blackbird.Applications.Sdk.Common.Files;
-using Blackbird.Filters.Coders;
 using Blackbird.Filters.Transformations;
+using System.Text;
 using Newtonsoft.Json;
 using ZendeskTests.Base;
 
@@ -84,7 +84,12 @@ public class ArticleTests:TestBase
         Assert.IsNotNull(result.Content);
 
         var contentString = FileManager.ReadOutputAsString(result.Content);
-        var codedContent = (new HtmlContentCoder()).Deserialize(contentString, result.Content.Name);
+        using var contentStream = new MemoryStream(Encoding.UTF8.GetBytes(contentString));
+        var loadResult = Transformation.Load(contentStream, result.Content.Name);
+        Assert.IsTrue(loadResult.Success, loadResult.Error);
+        var source = loadResult.Value.Source();
+        Assert.IsTrue(source.Success, source.Error);
+        var codedContent = source.Value;
 
         Console.WriteLine(contentString);
         Assert.AreEqual(DefaultLocale, codedContent.Language);
@@ -122,7 +127,10 @@ public class ArticleTests:TestBase
         Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
 
         var contentString = FileManager.ReadOutputAsString(result.Content);
-        var transformation = Transformation.Parse(contentString, result.Content.Name);
+        using var contentStream = new MemoryStream(Encoding.UTF8.GetBytes(contentString));
+        var loadResult = Transformation.Load(contentStream, result.Content.Name);
+        Assert.IsTrue(loadResult.Success, loadResult.Error);
+        var transformation = loadResult.Value;
 
         Assert.IsTrue(transformation.TargetSystemReference.SystemName == "Zendesk");
     }

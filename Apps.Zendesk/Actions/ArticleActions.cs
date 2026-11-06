@@ -16,7 +16,7 @@ using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Filters.Constants;
 using Blackbird.Filters.Extensions;
 using Blackbird.Filters.Transformations;
-using Blackbird.Filters.Xliff.Xliff2;
+using Blackbird.Filters.Bilingual.Xliff2;
 using RestSharp;
 using System.Net.Mime;
 using System.Text;
@@ -247,11 +247,16 @@ public class ArticleActions(InvocationContext invocationContext, IFileManagement
         var html = Encoding.UTF8.GetString(await file.GetByteData());
 
         Transformation? transformation = null;
-        if (Xliff2Serializer.IsXliff2(html))
+        using var contentStream = new MemoryStream(Encoding.UTF8.GetBytes(html));
+        if (Xliff2Serializer.IsXliff2(contentStream, out var xliffNode))
         {
-            transformation = Transformation.Parse(html, input.Content.Name);
-            html = transformation.Target().Serialize();
-            if (html == null) throw new PluginMisconfigurationException("XLIFF did not contain any files");
+            transformation = Xliff2Serializer.Deserialize(xliffNode);
+            var target = transformation.Target();
+            if (!target.Success || target.Value is null)
+                throw new PluginMisconfigurationException(target.Error ?? "XLIFF did not contain any files");
+            using var targetStream = target.Value.ToStream();
+            using var reader = new StreamReader(targetStream);
+            html = await reader.ReadToEndAsync();
         }
 
         var articleId = !String.IsNullOrEmpty(input.ContentId)? input.ContentId : FileTranslationRequest.ExtractBlackbirdId(html) ?? throw new PluginMisconfigurationException("Blackbird reference ID not found in the file and no article ID provided. Did you use a content file downloaded through Blackbird?");
@@ -277,7 +282,7 @@ public class ArticleActions(InvocationContext invocationContext, IFileManagement
             transformation.TargetSystemReference.SystemRef = "https://www.zendesk.com";
             transformation.TargetLanguage = input.Locale;
 
-            response.Content = await _fileManagementClient.UploadAsync(transformation.Serialize().ToStream(), MediaTypes.Xliff, transformation.XliffFileName);
+            response.Content = await _fileManagementClient.UploadAsync(transformation.Serialize().ToStream(), "application/x-xliff+xml", input.Content.Name);
         } else
         {
             response.Content = input.Content;
