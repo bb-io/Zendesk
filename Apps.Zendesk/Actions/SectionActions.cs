@@ -95,7 +95,7 @@ public class SectionActions : BaseInvocable
     }
 
     [Action("Update section translation", Description = "Update a section translation or create it if it does not exist")]
-    public async Task<Translation> TranslateSection([ActionParameter] SectionIdentifier section, [ActionParameter] TranslationRequest input)
+    public async Task<Translation> TranslateCategory([ActionParameter] SectionIdentifier section, [ActionParameter] TranslationRequest input)
     {
         var missingLocales = await GetSectionMissingTranslations(section);
         var isLocaleMissing = missingLocales.Locales.Contains(input.Locale);

@@ -61,7 +61,7 @@ public class CategoryActions(InvocationContext invocationContext) : BaseInvocabl
     }
 
     [Action("Update category", Description = "Update a category")]
-    public async Task<Category> UpdateCategory([ActionParameter] CategoryIdentifier category, [ActionParameter] CategoryRequest input)
+    public async Task<Category> UpdateSection([ActionParameter] CategoryIdentifier category, [ActionParameter] CategoryRequest input)
     {
         var request = new ZendeskRequest($"/api/v2/help_center/categories/{category.Id}", Method.Put);
         request.AddNewtonJson(new { category = input });

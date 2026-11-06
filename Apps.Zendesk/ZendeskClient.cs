@@ -146,7 +146,7 @@ public class ZendeskClient : RestClient
         return results;
     }
 
-    public async Task<RestResponse> ExecuteWithHandling(RestRequest request, int maxRetries = DefaultMaxRetries, bool allowNotFound = false)
+    public async Task<RestResponse> ExecuteWithHandling(RestRequest request, int maxRetries = DefaultMaxRetries)
     {
         int attempt = 0;
         RestResponse response;
@@ -157,9 +157,6 @@ public class ZendeskClient : RestClient
             try
             {
                 response = await ExecuteAsync(request);
-
-                if (allowNotFound && response.StatusCode == HttpStatusCode.NotFound)
-                    return response;
 
                 if (response.IsSuccessStatusCode)
                 {
