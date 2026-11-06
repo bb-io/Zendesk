@@ -1,5 +1,6 @@
 using Apps.Zendesk.Models;
 using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.Sdk.Common.Dictionaries;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
 
@@ -15,7 +16,7 @@ public class SupportLanguageDataHandler(InvocationContext context) : BaseInvocab
     public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken) =>
         (await new DynamicContentApi(new ZendeskClient(InvocationContext)).Locales()).Where(x => string.IsNullOrWhiteSpace(context.SearchString) || x.Name.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase) || x.Code.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase)).Select(x => new DataSourceItem(x.Code, x.Name));
 }
-public class DynamicFormatDataHandler : IDataSourceHandler
+public class DynamicFormatDataHandler : IStaticDataSourceItemHandler
 {
-    public Dictionary<string, string> GetData(DataSourceContext context) => new() { ["Text"] = "Text", ["HTML"] = "HTML" };
+    public IEnumerable<DataSourceItem> GetData() => new[] { new DataSourceItem("Text", "Text"), new DataSourceItem("HTML", "HTML") };
 }

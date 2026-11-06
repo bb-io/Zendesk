@@ -47,7 +47,7 @@ public class DynamicContentPolling(InvocationContext context) : BaseInvocable(co
             if (previous != null && changed)
             {
                 if (events.Count == 100) continue;
-                events.Add(new DynamicEvent { Item = item, DynamicContentId = item.Id, Name = item.Name, Placeholder = item.Placeholder, SourceLanguage = variant.Language!, SourceVariantId = variant.Id, SourceText = variant.Content, EventType = existed ? "updated" : "created" });
+                events.Add(new DynamicEvent { Item = item, DynamicContentId = item.Id, Name = item.Name, Placeholder = item.Placeholder, SourceLanguage = variant.Language!, SourceVariantId = variant.Id, SourceText = variant.Content ?? "", EventType = existed ? "updated" : "created" });
             }
             memory.Items[item.Id] = fingerprint;
         }

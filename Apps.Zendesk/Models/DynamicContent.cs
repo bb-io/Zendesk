@@ -1,5 +1,6 @@
 using Apps.Zendesk.DataSourceHandlers;
 using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.Sdk.Common.Dictionaries;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Files;
 using Newtonsoft.Json;
@@ -38,16 +39,16 @@ public class SingleDynamicItem { public DynamicItem Item { get; set; } = new(); 
 public class SingleDynamicVariant { public DynamicVariant Variant { get; set; } = new(); }
 public class SupportLocales { public List<SupportLocale> Locales { get; set; } = new(); }
 public class DynamicSearchInput { [Display("Query")] public string? Query { get; set; } }
-public class DynamicFindInput { [Display("Dynamic content ID"), DataSource(typeof(DynamicContentDataHandler))] public string? Id { get; set; } public string? Placeholder { get; set; } }
+public class DynamicFindInput { [Display("Dynamic content ID"), DataSource(typeof(DynamicContentDataHandler))] public string? Id { get; set; } [Display("Placeholder")] public string? Placeholder { get; set; } }
 public class DynamicIdInput { [Display("Dynamic content ID"), DataSource(typeof(DynamicContentDataHandler))] public string Id { get; set; } = ""; }
 public class DynamicLanguageInput { [Display("Source language"), DataSource(typeof(SupportLanguageDataHandler))] public string? Language { get; set; } }
-public class DynamicDownloadInput : DynamicLanguageInput { [Display("Content format"), DataSource(typeof(DynamicFormatDataHandler))] public string? Format { get; set; } }
+public class DynamicDownloadInput : DynamicLanguageInput { [Display("Content format"), StaticDataSource(typeof(DynamicFormatDataHandler))] public string? Format { get; set; } }
 public class DynamicUploadInput
 {
-    public FileReference Content { get; set; } = null!;
+    [Display("Content")] public FileReference Content { get; set; } = null!;
     [Display("Target language"), DataSource(typeof(SupportLanguageDataHandler))] public string? Language { get; set; }
     [Display("Dynamic content ID"), DataSource(typeof(DynamicContentDataHandler))] public string? Id { get; set; }
-    public bool? Active { get; set; }
+    [Display("Active")] public bool? Active { get; set; }
 }
 public class DynamicSearchOutput { public List<DynamicItem> Items { get; set; } = new(); [Display("Total count")] public int TotalCount { get; set; } }
 public class DynamicFindOutput { public bool Found { get; set; } public DynamicItem? Item { get; set; } }

@@ -26,6 +26,8 @@ public class DynamicContentApiTests
         Assert.AreEqual("2", (await actions.Find(new() { Placeholder = "dc.second" })).Item!.Id);
         Assert.IsTrue((await actions.Find(new() { Id = "1" })).Found);
         Assert.IsFalse((await actions.Find(new() { Id = "999" })).Found);
+        var invalidEndpoint = await Assert.ThrowsExceptionAsync<Blackbird.Applications.Sdk.Common.Exceptions.PluginApplicationException>(() => actions.Find(new() { Id = "997" }));
+        StringAssert.Contains(invalidEndpoint.Message, "This feature is not allowed for your Zendesk instance");
         await Assert.ThrowsExceptionAsync<Blackbird.Applications.Sdk.Common.Exceptions.PluginApplicationException>(() => actions.Find(new() { Id = "998" }));
         await Assert.ThrowsExceptionAsync<Blackbird.Applications.Sdk.Common.Exceptions.PluginMisconfigurationException>(() => actions.Find(new() { Id = "invalid" }));
         Assert.AreEqual(0, server.ExtraPageRequests);
@@ -119,6 +121,7 @@ public class DynamicContentApiTests
             }
             else if (path == "/api/v2/dynamic_content/items/999") { status = 404; response["error"] = "RecordNotFound"; }
             else if (path == "/api/v2/dynamic_content/items/998") { status = 403; response["error"] = "Forbidden"; }
+            else if (path == "/api/v2/dynamic_content/items/997") { status = 404; response["error"] = "InvalidEndpoint"; }
             else if (path == "/api/v2/dynamic_content/items/1") response["item"] = Item(1);
             else if (path.StartsWith("/api/v2/dynamic_content/items/1/variants") && c.Request.HttpMethod != "GET")
             {

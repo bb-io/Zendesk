@@ -1,7 +1,9 @@
 using Apps.Zendesk;
 using Apps.Zendesk.Actions;
+using Apps.Zendesk.DataSourceHandlers;
 using Apps.Zendesk.Models;
 using Apps.Zendesk.Polling;
+using Blackbird.Applications.Sdk.Common.Dictionaries;
 using Blackbird.Filters.Transformations;
 using System.Text;
 
@@ -10,6 +12,14 @@ namespace ZendeskTests;
 [TestClass]
 public class DynamicContentTests
 {
+    [TestMethod]
+    public void ContentFormatUsesStaticPicker()
+    {
+        var attribute = typeof(DynamicDownloadInput).GetProperty(nameof(DynamicDownloadInput.Format))!
+            .GetCustomAttributes(typeof(StaticDataSourceAttribute), false).Cast<StaticDataSourceAttribute>().Single();
+        Assert.AreEqual(typeof(DynamicFormatDataHandler), attribute.DataSourceHandler);
+        CollectionAssert.AreEqual(new[] { "Text", "HTML" }, new DynamicFormatDataHandler().GetData().Select(x => x.Value).ToArray());
+    }
     private static DynamicItem Item(int id, string text = "source") => new() { Id = id.ToString(), Name = "Example", Placeholder = "{{dc.example}}", DefaultLocaleId = 1, DefaultLanguage = "en-US", Variants = new() { new() { Id = $"{id}0", LocaleId = 1, Language = "en-US", Default = true, Content = text }, new() { Id = $"{id}1", LocaleId = 2, Language = "de", Content = "Ziel" } } };
 
     [TestMethod]
@@ -43,6 +53,16 @@ public class DynamicContentTests
         var second = DynamicContentPolling.Compare(items, first.Memory, new());
         Assert.AreEqual(1, second.Result!.Count); Assert.AreEqual("created", second.Result[0].EventType);
         Assert.IsFalse(DynamicContentPolling.Compare(items, second.Memory, new()).FlyBird);
+    }
+    [TestMethod]
+    public void PollUsesEmptySourceTextForNullContent()
+    {
+        var item = Item(1);
+        var baseline = DynamicContentPolling.Compare(new[] { item }, null, new());
+        item.Variants[0].Content = null!;
+        var changed = DynamicContentPolling.Compare(new[] { item }, baseline.Memory, new());
+        Assert.AreEqual("", changed.Result![0].SourceText);
+        Assert.IsFalse(DynamicContentPolling.Compare(new[] { item }, changed.Memory, new()).FlyBird);
     }
     [DataTestMethod]
     [DataRow("hc_toggle_theme")]

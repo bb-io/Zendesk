@@ -194,6 +194,7 @@ Dynamic Content requires permission to manage Dynamic Content in Zendesk Support
 
 ### Polling
 
+- **On dynamic content created or updated** triggers for new items or changes to the selected source variant. Optionally filter by name and select a source language; otherwise, each item's default language is used. The first poll establishes a baseline without emitting events. Each poll emits at most 100 events, with remaining changes deferred to later polls.
 - **On labels added to articles** Triggers when labels are added to matching articles. Optional **Deep search** flag queries articles by label name directly — enable this if label changes are not triggering the event on your Zendesk instance (some instances do not update `updated_at` when a label is added).
 - **On new tickets added** Triggers when new tickets are created.
 
