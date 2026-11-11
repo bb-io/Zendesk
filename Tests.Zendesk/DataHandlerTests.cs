@@ -53,5 +53,19 @@ namespace Tests.Zendesk
                 Assert.IsNotNull(label);
             }
         }
+
+        [TestMethod]
+        public async Task SectionDataHandler_IsSucces()
+        {
+            var handler = new SectionDataHandler(InvocationContext);
+
+            var result = await handler.GetDataAsync(new DataSourceContext(), CancellationToken.None);
+
+            foreach (var label in result)
+            {
+                Console.WriteLine($"{label.Value} - {label.Key}");
+                Assert.IsNotNull(label);
+            }
+        }
     }
 }

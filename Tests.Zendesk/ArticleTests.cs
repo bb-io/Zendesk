@@ -20,10 +20,19 @@ public class ArticleTests:TestBase
     public const string NewLocale = "fr";
 
     [TestMethod]
-    public async Task Search_articles_works()
+    public async Task Search_articles_works1()
     {
         var actions = new ArticleActions(InvocationContext, FileManager);
-        var result = await actions.SearchArticles(new SearchArticlesRequest { IncludeDrafts = true, LabelNames = ["Loc MT"] });
+        var result = await actions.SearchArticles(new SearchArticlesRequest { Locale= "en-us", CategoryIds = new List<string> { "360002306811" } });
+        Console.WriteLine(JsonConvert.SerializeObject(result.Articles, Formatting.Indented));
+
+        Assert.IsTrue(result.Articles.Any());
+    }
+    [TestMethod]
+    public async Task Search_articles_works2()
+    {
+        var actions = new ArticleActions(InvocationContext, FileManager);
+        var result = await actions.SearchArticles(new SearchArticlesRequest { Locale = "en-us", SectionIds = new List<string> { "43931345167124" } });
         Console.WriteLine(JsonConvert.SerializeObject(result.Articles, Formatting.Indented));
 
         Assert.IsTrue(result.Articles.Any());

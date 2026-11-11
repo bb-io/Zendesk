@@ -13,6 +13,10 @@ public class Section
     [Display("Section")]
     public string Id { get; set; }
 
+    [JsonProperty("parent_section_id")]
+    [Display("Parent section")]
+    public string? ParentSectionId { get; set; }
+
     [JsonProperty("html_url")]
     [Display("Public URL")]
     public string HtmlUrl { get; set; }
