@@ -15,6 +15,12 @@ public class DynamicContentItemResponse
     public DynamicContentItem Item { get; set; } = new();
 }
 
+public class DynamicContentVariantResponse
+{
+    [JsonProperty("variant")]
+    public DynamicContentVariant Variant { get; set; } = new();
+}
+
 public class SupportLocalesResponse
 {
     [JsonProperty("locales")]

@@ -8,8 +8,12 @@ using Apps.Zendesk.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Exceptions;
+using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Blackbird.Filters.Constants;
+using Blackbird.Filters.Extensions;
+using Blackbird.Filters.Transformations;
 using RestSharp;
 
 namespace Apps.Zendesk.Actions;
@@ -154,6 +158,154 @@ public class DynamicContentActions(
         };
     }
 
+    [Action("Upload dynamic content", Description = "Create or update a dynamic content language variant from a translated HTML or XLIFF file")]
+    public async Task<UploadDynamicContentResponse> UploadDynamicContent(
+        [ActionParameter] UploadDynamicContentRequest input)
+    {
+        ValidateUploadExtension(input.Content.Name);
+
+        using var fileStream = await _fileManagementClient.DownloadAsync(input.Content);
+        var transformationResult = Transformation.Load(
+            fileStream,
+            input.Content.Name,
+            input.Content.ContentType);
+        if (!transformationResult.Success)
+        {
+            throw new PluginMisconfigurationException(
+                $"The content file could not be read as supported HTML or XLIFF: {transformationResult.Error}");
+        }
+
+        var transformation = transformationResult.Value;
+        var targetResult = transformation.Target();
+        if (!targetResult.Success)
+        {
+            throw new PluginMisconfigurationException(
+                $"The translated content could not be extracted from the file: {targetResult.Error}");
+        }
+
+        var target = targetResult.Value;
+        DynamicContentHtmlConverter.ParsedContent parsed;
+        try
+        {
+            parsed = DynamicContentHtmlConverter.Parse(target.ToStream().ReadString());
+        }
+        catch (InvalidDataException exception)
+        {
+            throw new PluginMisconfigurationException(exception.Message);
+        }
+        var itemId = input.DynamicContentId?.Trim()
+            ?? parsed.DynamicContentId
+            ?? transformation.SourceSystemReference.ContentId;
+        if (string.IsNullOrWhiteSpace(itemId))
+        {
+            throw new PluginMisconfigurationException(
+                "Dynamic content ID is missing. Provide it in the action input or use a file produced by Download dynamic content.");
+        }
+
+        ValidateId(itemId);
+
+        var targetLanguage = input.TargetLanguage?.Trim()
+            ?? transformation.TargetLanguage
+            ?? target.Language
+            ?? transformation.SourceLanguage;
+        if (string.IsNullOrWhiteSpace(targetLanguage))
+        {
+            throw new PluginMisconfigurationException(
+                "Target language is missing. Provide it in the action input or in the translated file metadata.");
+        }
+
+        var locales = await GetSupportLocales();
+        var targetLocale = locales.FirstOrDefault(x => string.Equals(
+            x.LocaleCode, targetLanguage, StringComparison.OrdinalIgnoreCase));
+        if (targetLocale is null)
+        {
+            var available = string.Join(", ", locales.Select(x => x.LocaleCode));
+            throw new PluginMisconfigurationException(
+                $"Target language '{targetLanguage}' is not enabled in Zendesk Support. Available languages: {available}.");
+        }
+
+        var item = await GetItem(itemId);
+        var variant = item.Variants.FirstOrDefault(x => x.LocaleId == targetLocale.Id);
+        string operation;
+
+        if (variant is null)
+        {
+            var createRequest = new ZendeskRequest(
+                $"/api/v2/dynamic_content/items/{item.Id}/variants", Method.Post);
+            createRequest.AddNewtonJson(new
+            {
+                variant = new
+                {
+                    locale_id = targetLocale.Id,
+                    active = input.Active ?? true,
+                    content = parsed.Content
+                }
+            });
+            variant = (await _client.ExecuteWithHandling<DynamicContentVariantResponse>(createRequest)).Variant;
+            operation = "created";
+        }
+        else
+        {
+            var active = input.Active ?? variant.Active;
+            if (variant.Content == parsed.Content && variant.Active == active)
+            {
+                operation = "unchanged";
+            }
+            else
+            {
+                var updateRequest = new ZendeskRequest(
+                    $"/api/v2/dynamic_content/items/{item.Id}/variants/{variant.Id}", Method.Put);
+                updateRequest.AddNewtonJson(new
+                {
+                    variant = new
+                    {
+                        active,
+                        content = parsed.Content
+                    }
+                });
+                variant = (await _client.ExecuteWithHandling<DynamicContentVariantResponse>(updateRequest)).Variant;
+                operation = "updated";
+            }
+        }
+
+        var adminUrl = string.IsNullOrWhiteSpace(item.Url)
+            ? $"{_client.BaseUrl}/api/v2/dynamic_content/items/{item.Id}"
+            : item.Url;
+        transformation.TargetSystemReference.ContentId = item.Id;
+        transformation.TargetSystemReference.ContentName = item.Name;
+        transformation.TargetSystemReference.AdminUrl = adminUrl;
+        transformation.TargetSystemReference.SystemName = "Zendesk";
+        transformation.TargetSystemReference.SystemRef = _client.BaseUrl;
+        transformation.TargetLanguage = targetLocale.LocaleCode;
+
+        FileReference outputFile;
+        if (transformationResult.WasBilingual)
+        {
+            outputFile = await _fileManagementClient.UploadAsync(
+                transformation.ToStream(),
+                MediaTypes.Xliff2,
+                transformation.BilingualFileName);
+        }
+        else
+        {
+            target.SystemReference = transformation.TargetSystemReference;
+            target.Language = targetLocale.LocaleCode;
+            outputFile = await _fileManagementClient.UploadAsync(
+                target.ToStream(),
+                target.OriginalMediaType,
+                target.OriginalName);
+        }
+
+        return new UploadDynamicContentResponse
+        {
+            Content = outputFile,
+            DynamicContentId = item.Id,
+            VariantId = variant.Id,
+            TargetLanguage = targetLocale.LocaleCode,
+            Operation = operation
+        };
+    }
+
     public static string NormalizePlaceholder(string placeholder)
     {
         var value = placeholder.Trim();
@@ -223,6 +375,18 @@ public class DynamicContentActions(
     {
         if (!long.TryParse(id, out var parsed) || parsed <= 0)
             throw new PluginMisconfigurationException("Dynamic content ID must be a positive integer.");
+    }
+
+    private static void ValidateUploadExtension(string fileName)
+    {
+        var extension = Path.GetExtension(fileName);
+        if (!extension.Equals(".html", StringComparison.OrdinalIgnoreCase)
+            && !extension.Equals(".xliff", StringComparison.OrdinalIgnoreCase)
+            && !extension.Equals(".xlf", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new PluginMisconfigurationException(
+                "Only .html, .xliff, and .xlf files are supported.");
+        }
     }
 
     private static bool IsNotFound(PluginApplicationException exception) =>

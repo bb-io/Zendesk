@@ -9,6 +9,13 @@ public static class DynamicContentHtmlConverter
     public const string TextFormat = "Text";
     public const string HtmlFormat = "HTML";
 
+    public sealed record ParsedContent(
+        string? DynamicContentId,
+        string? SourceVariantId,
+        string? Placeholder,
+        string ContentFormat,
+        string Content);
+
     public static string Convert(
         DynamicContentItem item,
         DynamicContentVariant variant,
@@ -57,6 +64,44 @@ public static class DynamicContentHtmlConverter
         return document.DocumentNode.OuterHtml;
     }
 
+    public static ParsedContent Parse(string html)
+    {
+        var document = new HtmlDocument();
+        document.LoadHtml(html);
+
+        var contentNode = document.DocumentNode.SelectSingleNode(
+            "//*[@data-zendesk-field-id='content']");
+        if (contentNode is null)
+        {
+            throw new InvalidDataException(
+                "The file does not contain the Zendesk dynamic content field. Check that the file was produced by Download dynamic content.");
+        }
+
+        var format = contentNode.GetAttributeValue("data-zendesk-field-type", null)
+            ?? GetMeta(document, "zendesk-dynamic-content-format");
+        if (format?.Equals(TextFormat, StringComparison.OrdinalIgnoreCase) == true)
+            format = TextFormat;
+        else if (format?.Equals(HtmlFormat, StringComparison.OrdinalIgnoreCase) == true)
+            format = HtmlFormat;
+        else
+            throw new InvalidDataException("The dynamic content format metadata must be Text or HTML.");
+
+        var container = contentNode.Ancestors("div").FirstOrDefault(x =>
+            x.Attributes["data-zendesk-dynamic-content-id"] is not null);
+        var itemId = container?.GetAttributeValue("data-zendesk-dynamic-content-id", null)
+            ?? GetMeta(document, "blackbird-ucid");
+        var variantId = container?.GetAttributeValue("data-zendesk-variant-id", null)
+            ?? GetMeta(document, "zendesk-dynamic-content-source-variant-id");
+        var placeholder = container?.GetAttributeValue("data-zendesk-placeholder", null)
+            ?? GetMeta(document, "zendesk-dynamic-content-placeholder");
+
+        var content = format == TextFormat
+            ? HtmlEntity.DeEntitize(contentNode.InnerText)
+            : contentNode.InnerHtml;
+
+        return new ParsedContent(itemId, variantId, placeholder, format, content);
+    }
+
     private static void AddMeta(HtmlDocument document, HtmlNode head, string name, string value)
     {
         var meta = document.CreateElement("meta");
@@ -64,4 +109,8 @@ public static class DynamicContentHtmlConverter
         meta.SetAttributeValue("content", value);
         head.AppendChild(meta);
     }
+
+    private static string? GetMeta(HtmlDocument document, string name) =>
+        document.DocumentNode.SelectSingleNode($"//meta[@name='{name}']")
+            ?.GetAttributeValue("content", null);
 }
