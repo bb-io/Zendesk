@@ -66,14 +66,18 @@ public class ZendeskClient : RestClient
     {
         request.AddQueryParameter("page[size]", 100);
         var results = new List<T>();
-        string? next_page;
-        do
+
+        while (true)
         {
             var response = await ExecuteWithHandling<T>(request);
-
-            next_page = response.NextPage;
             results.Add(response);
-        } while (next_page != null);
+
+            var nextPage = response.NextPage;
+            if (string.IsNullOrWhiteSpace(nextPage))
+                break;
+
+            request = new ZendeskRequest(nextPage, Method.Get);
+        }
 
         return results;
     }
