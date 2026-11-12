@@ -35,61 +35,40 @@ public class ArticleActions(InvocationContext invocationContext, IFileManagement
     [Action("Search articles", Description = "Search articles using filters")]
     public async Task<ListArticlesResponse> SearchArticles([ActionParameter] SearchArticlesRequest input)
     {
-        var sectionIds = input.SectionIds?
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct()
-            .ToArray() ?? [];
+        var sectionIds = NormalizeIds(input.SectionIds);
+        var categoryIds = NormalizeIds(input.CategoryIds);
+        var hasSectionFilter = sectionIds.Length > 0;
+        var hasCategoryFilter = categoryIds.Length > 0;
         var effectiveSectionIds = sectionIds;
 
-        IEnumerable<Article> articles;
-
-        if (sectionIds.Length > 0)
+        if (hasSectionFilter && (input.IncludeDescendantSections != false || hasCategoryFilter))
         {
-            var sectionsEndpoint = string.IsNullOrWhiteSpace(input.Locale)
-                ? "/api/v2/help_center/sections"
-                : $"/api/v2/help_center/{input.Locale}/sections";
-            var sectionsRequest = new ZendeskRequest(sectionsEndpoint, Method.Get);
-            var sectionPages = await Client.GetPaginated<MultipleSections>(sectionsRequest);
-            var allSections = sectionPages.SelectMany(x => x.Sections ?? []);
-            effectiveSectionIds = GetSectionIdsIncludingDescendants(sectionIds, allSections);
+            var allSections = await GetAllSections(input.Locale);
+            if (input.IncludeDescendantSections != false)
+                effectiveSectionIds = GetSectionIdsIncludingDescendants(sectionIds, allSections);
 
-            var articlesById = new Dictionary<string, Article>();
-
-            foreach (var sectionId in effectiveSectionIds)
+            if (hasCategoryFilter)
             {
-                var endpoint = string.IsNullOrWhiteSpace(input.Locale)
-                    ? $"/api/v2/help_center/sections/{sectionId}/articles"
-                    : $"/api/v2/help_center/{input.Locale}/sections/{sectionId}/articles";
-                var request = new ZendeskRequest(endpoint, Method.Get);
-                var pages = await Client.GetPaginated<MultipleArticles>(request);
-
-                foreach (var article in pages.SelectMany(x => x.Articles ?? []))
-                    articlesById[article.ContentId] = article;
+                var selectedCategoryIds = categoryIds.ToHashSet();
+                var sectionsById = allSections.ToDictionary(x => x.Id);
+                effectiveSectionIds = effectiveSectionIds
+                    .Where(id => sectionsById.TryGetValue(id, out var section)
+                        && selectedCategoryIds.Contains(section.CategoryId))
+                    .ToArray();
             }
-
-            articles = articlesById.Values;
         }
+
+        IEnumerable<Article> articles;
+        if (hasSectionFilter && !hasCategoryFilter)
+            articles = await GetArticlesBySections(effectiveSectionIds, input.Locale);
+        else if (hasCategoryFilter && !hasSectionFilter)
+            articles = await GetArticlesByCategories(categoryIds, input.Locale);
         else
-        {
-            long startTimeUnix = 0;
-            if (input.UpdatedAfter.HasValue)
-                startTimeUnix = input.UpdatedAfter.Value.ToUnixTimeSeconds();
-            else if (input.CreatedAfter.HasValue)
-                startTimeUnix = input.CreatedAfter.Value.ToUnixTimeSeconds();
-
-            // While Zendesk has the 'search' endpoint with all server-side filters, it won't pick up drafts
-            // The 'List articles incrementally' will pick all the drafts, but it does not have server-side filters
-            // We'll use the incremental endpoint to fetch all drafts and do the filtering manually
-            // https://developer.zendesk.com/api-reference/help_center/help-center-api/articles/#list-articles-incrementally
-            var request = new ZendeskRequest($"/api/v2/help_center/incremental/articles?start_time={startTimeUnix}", Method.Get);
-            var pages = await Client.GetPaginatedIncremental<MultipleArticles>(request, response => response.Articles?.Count() ?? 0);
-            articles = pages.SelectMany(x => x.Articles ?? []);
-        }
+            articles = await GetArticlesIncrementally(input);
 
         var filtered = articles
             .AsEnumerable()
             .WhereEquals(input.Locale, a => a.Locale)
-            .WhereContains(effectiveSectionIds, a => a.SectionId)
             .WhereIntersects(input.LabelNames, a => a.Labels)   // label_names param does not work, so filtering manually
             .WhereDateAfter(input.CreatedAfter, a => a.CreatedAt)
             .WhereDateBefore(input.CreatedBefore, a => a.CreatedAt)
@@ -99,6 +78,12 @@ public class ArticleActions(InvocationContext invocationContext, IFileManagement
             .WhereDateIs(input.UpdatedAt, a => a.UpdatedAt)
             .WhereAnyContains(input.Query, a => a.Title, a => a.Body);
 
+        if (hasSectionFilter)
+        {
+            var selectedSectionIds = effectiveSectionIds.ToHashSet();
+            filtered = filtered.Where(a => selectedSectionIds.Contains(a.SectionId));
+        }
+
         if (input.IncludeDrafts != true)
             filtered = filtered.Where(a => !a.Draft);
 
@@ -107,6 +92,76 @@ public class ArticleActions(InvocationContext invocationContext, IFileManagement
             Articles = filtered.DistinctBy(a => a.ContentId).ToArray()
         };
     }
+
+    private async Task<IEnumerable<Article>> GetArticlesBySections(
+        IEnumerable<string> sectionIds,
+        string? locale)
+    {
+        var articlesById = new Dictionary<string, Article>();
+
+        foreach (var sectionId in sectionIds)
+        {
+            var endpoint = string.IsNullOrWhiteSpace(locale)
+                ? $"/api/v2/help_center/sections/{sectionId}/articles"
+                : $"/api/v2/help_center/{locale}/sections/{sectionId}/articles";
+            var request = new ZendeskRequest(endpoint, Method.Get);
+            var pages = await Client.GetPaginated<MultipleArticles>(request);
+
+            foreach (var article in pages.SelectMany(x => x.Articles ?? []))
+                articlesById[article.ContentId] = article;
+        }
+
+        return articlesById.Values;
+    }
+
+    private async Task<IEnumerable<Article>> GetArticlesByCategories(
+        IEnumerable<string> categoryIds,
+        string? locale)
+    {
+        var articlesById = new Dictionary<string, Article>();
+
+        foreach (var categoryId in categoryIds)
+        {
+            var endpoint = string.IsNullOrWhiteSpace(locale)
+                ? $"/api/v2/help_center/categories/{categoryId}/articles"
+                : $"/api/v2/help_center/{locale}/categories/{categoryId}/articles";
+            var request = new ZendeskRequest(endpoint, Method.Get);
+            var pages = await Client.GetPaginated<MultipleArticles>(request);
+
+            foreach (var article in pages.SelectMany(x => x.Articles ?? []))
+                articlesById[article.ContentId] = article;
+        }
+
+        return articlesById.Values;
+    }
+
+    private async Task<IEnumerable<Article>> GetArticlesIncrementally(SearchArticlesRequest input)
+    {
+        long startTimeUnix = 0;
+        if (input.UpdatedAfter.HasValue)
+            startTimeUnix = input.UpdatedAfter.Value.ToUnixTimeSeconds();
+        else if (input.CreatedAfter.HasValue)
+            startTimeUnix = input.CreatedAfter.Value.ToUnixTimeSeconds();
+
+        var request = new ZendeskRequest($"/api/v2/help_center/incremental/articles?start_time={startTimeUnix}", Method.Get);
+        var pages = await Client.GetPaginatedIncremental<MultipleArticles>(request, response => response.Articles?.Count() ?? 0);
+        return pages.SelectMany(x => x.Articles ?? []);
+    }
+
+    private async Task<Section[]> GetAllSections(string? locale)
+    {
+        var endpoint = string.IsNullOrWhiteSpace(locale)
+            ? "/api/v2/help_center/sections"
+            : $"/api/v2/help_center/{locale}/sections";
+        var request = new ZendeskRequest(endpoint, Method.Get);
+        var pages = await Client.GetPaginated<MultipleSections>(request);
+        return pages.SelectMany(x => x.Sections ?? []).ToArray();
+    }
+
+    private static string[] NormalizeIds(IEnumerable<string>? ids) => ids?
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Distinct()
+        .ToArray() ?? [];
 
     private static string[] GetSectionIdsIncludingDescendants(
         IEnumerable<string> selectedSectionIds,
