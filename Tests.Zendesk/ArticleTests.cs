@@ -39,6 +39,37 @@ public class ArticleTests:TestBase
     }
 
     [TestMethod]
+    public async Task Search_articles_with_category_and_parent_section_works()
+    {
+        var actions = new ArticleActions(InvocationContext, FileManager);
+        var result = await actions.SearchArticles(new SearchArticlesRequest
+        {
+            Locale = "en-us",
+            IncludeDrafts = true,
+            CategoryIds = ["360002306811"],
+            //SectionIds = ["35570228829588"]
+        });
+
+        Console.WriteLine($"Article count: {result.Articles.Count()}");
+        Assert.IsTrue(result.Articles.Any());
+    }
+
+    [TestMethod]
+    public async Task Search_parent_section_without_descendants_returns_empty()
+    {
+        var actions = new ArticleActions(InvocationContext, FileManager);
+        var result = await actions.SearchArticles(new SearchArticlesRequest
+        {
+            Locale = "en-us",
+            IncludeDrafts = true,
+            IncludeDescendantSections = false,
+            SectionIds = ["35570228829588"]
+        });
+
+        Assert.IsFalse(result.Articles.Any());
+    }
+
+    [TestMethod]
     public async Task GetArticleIdFromHtml_returns_values()
     {
         var action = new ArticleActions(InvocationContext, FileManager);

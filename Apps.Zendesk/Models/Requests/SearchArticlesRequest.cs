@@ -19,6 +19,9 @@ public class SearchArticlesRequest
     [DataSource(typeof(SectionDataHandler))]
     public IEnumerable<string>? SectionIds { get; set; }
 
+    [Display("Include descendant sections", Description = "Include articles from all descendant sections. Default is true")]
+    public bool? IncludeDescendantSections { get; set; }
+
     [Display("Label names")]
     public IEnumerable<string>? LabelNames { get; set; }
 
